@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Monitor · AlphaTerminal</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e2e8f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: #161b22; border-bottom: 1px solid #21262d;
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; gap: 16px;
+}
+.header-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f4; }
+.header-spacer { flex: 1; }
+.nav-link {
+  color: #7a8499; font-size: 0.82rem; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px; transition: color .15s, background .15s;
+}
+.nav-link:hover { color: #e2e8f4; background: #1e2536; }
+.nav-link.active { color: #00d68f; }
+
+.main { max-width: 1280px; margin: 0 auto; padding: 28px 24px; }
+.section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5568; margin-bottom: 14px; }
+
+/* ── Add-trade form ── */
+.add-form {
+  background: #161b22; border: 1px solid #21262d; border-radius: 10px;
+  padding: 18px 20px; margin-bottom: 28px;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+}
+.add-form input, .add-form select {
+  background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+  color: #e2e8f4; font-size: 0.85rem; padding: 7px 10px; outline: none;
+  transition: border-color .15s;
+}
+.add-form input:focus, .add-form select:focus { border-color: #00d68f44; }
+.add-form .f-sym  { width: 90px; text-transform: uppercase; }
+.add-form .f-strat { width: 160px; }
+.add-form .f-price { width: 90px; }
+.add-form .f-qty   { width: 70px; }
+.add-form .f-notes { width: 200px; }
+.add-form .f-tags  { width: 140px; }
+.lbl { font-size: 0.68rem; color: #4a5568; margin-bottom: 3px; }
+.field { display: flex; flex-direction: column; }
+
+.btn {
+  border-radius: 6px; padding: 7px 16px; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap; border: 1px solid transparent; transition: background .15s;
+}
+.btn-add  { background: #00d68f18; color: #00d68f; border-color: #00d68f44; }
+.btn-add:hover  { background: #00d68f30; }
+.btn-ref  { background: #1e2536; color: #94a3b8; border-color: #2a3347; }
+.btn-ref:hover  { background: #252d3d; }
+.msg-line { font-size: 0.8rem; color: #7a8499; width: 100%; padding: 2px 0; }
+
+/* ── Filters ── */
+.toolbar {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.toolbar select {
+  background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+  color: #e2e8f4; font-size: 0.82rem; padding: 6px 10px; outline: none;
+}
+
+/* ── Summary bar ── */
+.summary {
+  display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px;
+  background: #161b22; border: 1px solid #21262d; border-radius: 8px;
+  padding: 12px 16px;
+}
+.summary-item { font-size: 0.78rem; color: #4a5568; }
+.summary-item b { color: #e2e8f4; }
+.green { color: #00d68f !important; }
+.red   { color: #f04040 !important; }
+
+/* ── Table ── */
+table.trades-tbl { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+table.trades-tbl th {
+  background: #161b22; color: #4a5568; padding: 8px 10px;
+  border-bottom: 1px solid #21262d; text-align: left;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+}
+table.trades-tbl td {
+  background: #0d1117; color: #e2e8f4; padding: 9px 10px;
+  border-bottom: 1px solid #161b22; vertical-align: middle;
+}
+table.trades-tbl tr:hover td { background: #13181f; }
+
+.badge-open   { background: #0d2b1a; color: #00d68f; border: 1px solid #00d68f44; border-radius: 12px; padding: 2px 9px; font-size: 0.7rem; font-weight: 700; }
+.badge-closed { background: #161b22; color: #7a8499; border: 1px solid #2a3347;   border-radius: 12px; padding: 2px 9px; font-size: 0.7rem; font-weight: 700; }
+.pnl-pos { background: #0d2b1a; color: #00d68f; border-radius: 6px; padding: 4px 9px; font-weight: 700; font-size: 0.82rem; display: inline-block; min-width: 78px; text-align: right; }
+.pnl-neg { background: #2b0d0d; color: #f04040; border-radius: 6px; padding: 4px 9px; font-weight: 700; font-size: 0.82rem; display: inline-block; min-width: 78px; text-align: right; }
+
+.btn-close { background: #0d2b1a; color: #00d68f; border: 1px solid #00d68f44; border-radius: 5px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; font-weight: 600; margin: 1px; }
+.btn-edit  { background: #1e2536; color: #94a3b8; border: 1px solid #2a3347;   border-radius: 5px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; font-weight: 600; margin: 1px; }
+.btn-del   { background: #2b0d0d; color: #f04040; border: 1px solid #f0404044; border-radius: 5px; padding: 3px 8px; font-size: 0.7rem; cursor: pointer; font-weight: 600; margin: 1px; }
+
+/* ── Edit / Close modals ── */
+.modal-bg {
+  display: none; position: fixed; inset: 0; background: #00000088; z-index: 200;
+  align-items: center; justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: #161b22; border: 1px solid #21262d; border-radius: 12px;
+  padding: 24px; width: 440px; max-width: 95vw;
+}
+.modal h3 { font-size: 0.95rem; color: #e2e8f4; margin-bottom: 16px; }
+.modal label { font-size: 0.7rem; color: #4a5568; display: block; margin-bottom: 3px; margin-top: 10px; }
+.modal input, .modal textarea {
+  width: 100%; background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+  color: #e2e8f4; font-size: 0.85rem; padding: 7px 10px; outline: none;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.btn-cancel { background: #1e2536; color: #94a3b8; border: 1px solid #2a3347; border-radius: 6px; padding: 7px 14px; font-size: 0.82rem; cursor: pointer; }
+.btn-save   { background: #00d68f18; color: #00d68f; border: 1px solid #00d68f44; border-radius: 6px; padding: 7px 14px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">AlphaTerminal</span>
+  <div style="width:1px;height:24px;background:#21262d;"></div>
+  <a href="/" class="nav-link">Dashboard</a>
+  <a href="/alerts" class="nav-link">Alerts</a>
+  <a href="/trades" class="nav-link active">Trades</a>
+  <a href="/notes" class="nav-link">Notes</a>
+  <a href="/watchlist" class="nav-link">Watchlist</a>
+  <a href="/new-finds" class="nav-link">New Finds</a>
+  <div class="header-spacer"></div>
+</div>
+
+<div class="main">
+
+  <!-- Add trade form -->
+  <div class="section-title">Log Trade</div>
+  <div class="add-form">
+    <div class="field"><div class="lbl">SYMBOL</div><input id="fSym" class="f-sym" placeholder="AAPL"></div>
+    <div class="field"><div class="lbl">STRATEGY</div><input id="fStrat" class="f-strat" placeholder="UT Bot"></div>
+    <div class="field"><div class="lbl">SIDE</div>
+      <select id="fSide"><option>LONG</option><option>SHORT</option></select></div>
+    <div class="field"><div class="lbl">STATUS</div>
+      <select id="fStatus"><option>OPEN</option><option>CLOSED</option></select></div>
+    <div class="field"><div class="lbl">ENTRY $</div><input id="fEntry" class="f-price" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="field"><div class="lbl">QTY</div><input id="fQty" class="f-qty" type="number" placeholder="1"></div>
+    <div class="field"><div class="lbl">TARGET $</div><input id="fTarget" class="f-price" type="number" step="0.01" placeholder="opt"></div>
+    <div class="field"><div class="lbl">STOP $</div><input id="fStop" class="f-price" type="number" step="0.01" placeholder="opt"></div>
+    <div class="field"><div class="lbl">NOTES</div><input id="fNotes" class="f-notes" placeholder="opt"></div>
+    <div class="field"><div class="lbl">TAGS</div><input id="fTags" class="f-tags" placeholder="alert, swing"></div>
+    <button class="btn btn-add" onclick="addTrade()">+ Log Trade</button>
+    <div id="addMsg" class="msg-line"></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="section-title" style="margin:0;">Positions</span>
+    <select id="statusFilter" onchange="loadTrades()">
+      <option value="ALL">All</option>
+      <option value="OPEN">Open</option>
+      <option value="CLOSED">Closed</option>
+    </select>
+    <select id="sortBy" onchange="loadTrades()">
+      <option value="entry_date">Date</option>
+      <option value="pnl_pct">P&L %</option>
+      <option value="symbol">Symbol</option>
+      <option value="status">Status</option>
+    </select>
+    <button class="btn btn-ref" onclick="refreshPrices()">⟳ Refresh Prices</button>
+    <div id="refMsg" style="font-size:0.78rem;color:#7a8499;"></div>
+  </div>
+
+  <div id="summary" class="summary" style="display:none;"></div>
+  <div id="tradesContainer"><div style="color:#4a5568;padding:24px 0;text-align:center;">Loading…</div></div>
+</div>
+
+<!-- Close modal -->
+<div id="closeModal" class="modal-bg">
+  <div class="modal">
+    <h3>Close Trade — <span id="closeSymLabel" style="color:#00d68f;"></span></h3>
+    <input type="hidden" id="closeTid">
+    <label>EXIT PRICE <span style="color:#4a5568;font-size:0.68rem;font-weight:400;">(leave blank to close at current market price)</span></label>
+    <input id="closePrice" type="number" step="0.01" placeholder="Leave blank = current price">
+    <div id="closePriceFetch" style="font-size:0.75rem;color:#f59e0b;margin-top:5px;display:none;">
+      ⟳ Fetching current price…
+    </div>
+    <div id="closeMsg" style="font-size:0.78rem;color:#7a8499;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('closeModal')">Cancel</button>
+      <button class="btn-save" onclick="submitClose()" id="closeSaveBtn">Close Trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div id="editModal" class="modal-bg">
+  <div class="modal">
+    <h3>Edit Trade</h3>
+    <input type="hidden" id="editTid">
+    <label>STRATEGY</label>
+    <input id="editStrat" placeholder="Strategy name">
+    <label>NOTES</label>
+    <textarea id="editNotes" rows="2"></textarea>
+    <label>TAGS (comma-separated)</label>
+    <input id="editTags" placeholder="swing, alert">
+    <div id="editMsg" style="font-size:0.78rem;color:#7a8499;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn-save" onclick="submitEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _trades = [];
+
+async function loadTrades() {
+  const status = document.getElementById("statusFilter").value;
+  const sort   = document.getElementById("sortBy").value;
+  const res    = await fetch(`/api/trades?status=${status}&sort=${sort}`);
+  _trades      = await res.json();
+  renderTrades();
+}
+
+function renderTrades() {
+  const container = document.getElementById("tradesContainer");
+  const sumDiv    = document.getElementById("summary");
+  if (!_trades.length) {
+    container.innerHTML = "<div style='color:#4a5568;padding:24px 0;text-align:center;'>No trades found.</div>";
+    sumDiv.style.display = "none";
+    return;
+  }
+
+  // Summary
+  const open   = _trades.filter(t => t.status === "OPEN");
+  const closed = _trades.filter(t => t.status === "CLOSED");
+  const openPnl    = open.reduce((s,t)   => s + (t.unrealized_pnl || 0), 0);
+  const realPnl    = closed.reduce((s,t) => s + (t.realized_pnl   || 0), 0);
+  const totalPnl   = openPnl + realPnl;
+  const fc = v => v >= 0 ? "green" : "red";
+  sumDiv.style.display = "flex";
+  sumDiv.innerHTML = `
+    <span class="summary-item">OPEN <b>${open.length}</b></span>
+    <span class="summary-item">CLOSED <b>${closed.length}</b></span>
+    <span class="summary-item">UNREALIZED P&L <b class="${fc(openPnl)}">${fmt$(openPnl)}</b></span>
+    <span class="summary-item">REALIZED P&L <b class="${fc(realPnl)}">${fmt$(realPnl)}</b></span>
+    <span class="summary-item">TOTAL <b class="${fc(totalPnl)}">${fmt$(totalPnl)}</b></span>`;
+
+  // Rows
+  const rows = _trades.map(t => {
+    const pnlVal = t.status === "CLOSED" ? (t.realized_pnl || 0) : (t.unrealized_pnl || 0);
+    const pnlPct = t.pnl_pct || 0;
+    const pnlCls = pnlVal >= 0 ? "pnl-pos" : "pnl-neg";
+    const tags   = (t.tags || []).slice(0,4).map(tg =>
+      `<span style="background:#1e2536;color:#7a8499;border-radius:4px;padding:1px 5px;font-size:0.66rem;margin:1px;">${tg}</span>`
+    ).join("");
+    const statusBadge = t.status === "OPEN"
+      ? `<span class="badge-open">OPEN</span>`
+      : `<span class="badge-closed">CLOSED</span>`;
+    const sideColor = t.side === "LONG" ? "#00d68f" : "#f87171";
+    const upd = t.updated_at || t.entry_date;
+    const updStr = upd ? new Date(upd).toLocaleString("en-US",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
+    const closeBtn = t.status === "OPEN"
+      ? `<button class="btn-close" onclick="openClose('${t.id}')">✓ Close</button>` : "";
+    const tvUrl = `https://www.tradingview.com/symbols/${(t.symbol||"").replace(".","/")}/ `;
+    return `<tr>
+      <td><a href="${tvUrl}" target="_blank" style="color:#00d68f;font-weight:700;">${t.symbol}</a>${tags ? `<br>${tags}` : ""}</td>
+      <td style="color:${sideColor};font-weight:700;font-size:0.78rem;">${t.side}</td>
+      <td>${statusBadge}</td>
+      <td style="color:#e2e8f4;font-weight:600;">$${fmt(t.entry_price)}<br><span style="color:#4a5568;font-size:0.7rem;">qty ${t.quantity||0}</span></td>
+      <td style="color:#e2e8f4;">$${fmt(t.current_price || t.entry_price)}</td>
+      <td><span class="${pnlCls}">${fmt$(pnlVal)}<br><span style="font-size:0.7rem;">${pnlPct >= 0?"+":""}${pnlPct.toFixed(1)}%</span></span></td>
+      <td style="color:#7a8499;font-size:0.8rem;">${t.target_price ? "$"+fmt(t.target_price) : "—"}<br><span style="color:#f04040;font-size:0.75rem;">${t.stop_loss ? "$"+fmt(t.stop_loss) : "—"}</span></td>
+      <td style="color:#7a8499;font-size:0.82rem;">${t.risk_reward ? t.risk_reward.toFixed(1)+"x" : "—"}</td>
+      <td style="color:#7a8499;font-size:0.8rem;">${esc((t.strategy_name||"—").slice(0,22))}</td>
+      <td style="color:#7a8499;font-size:0.77rem;max-width:160px;">${esc((t.notes||"").slice(0,50))}</td>
+      <td style="color:#4a5568;font-size:0.72rem;white-space:nowrap;">${updStr}</td>
+      <td style="white-space:nowrap;">${closeBtn}<button class="btn-edit" onclick="openEdit('${t.id}')">✎ Edit</button><button class="btn-del" onclick="deleteTrade('${t.id}')">✕</button></td>
+    </tr>`;
+  }).join("");
+
+  container.innerHTML = `<table class="trades-tbl"><thead><tr>
+    <th>SYMBOL</th><th>SIDE</th><th>STATUS</th><th>ENTRY/QTY</th><th>CURRENT</th>
+    <th>P&L</th><th>TARGET/SL</th><th>R:R</th><th>STRATEGY</th>
+    <th>NOTES</th><th>UPDATED</th><th>ACTIONS</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function addTrade() {
+  const msg = document.getElementById("addMsg");
+  const body = {
+    symbol:        document.getElementById("fSym").value.trim().toUpperCase(),
+    strategy_name: document.getElementById("fStrat").value.trim(),
+    side:          document.getElementById("fSide").value,
+    status:        document.getElementById("fStatus").value,
+    entry_price:   parseFloat(document.getElementById("fEntry").value) || 0,
+    quantity:      parseInt(document.getElementById("fQty").value) || 1,
+    target_price:  parseFloat(document.getElementById("fTarget").value) || null,
+    stop_loss:     parseFloat(document.getElementById("fStop").value) || null,
+    notes:         document.getElementById("fNotes").value.trim(),
+    tags:          document.getElementById("fTags").value.trim(),
+  };
+  const res  = await fetch("/api/trades", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+  const data = await res.json();
+  msg.textContent = data.message || data.error || "";
+  if (data.ok) {
+    ["fSym","fStrat","fEntry","fQty","fTarget","fStop","fNotes","fTags"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
+    loadTrades();
+  }
+}
+
+async function refreshPrices() {
+  const msg = document.getElementById("refMsg");
+  msg.textContent = "Refreshing…";
+  const res  = await fetch("/api/trades/refresh-prices", {method:"POST"});
+  const data = await res.json();
+  msg.textContent = data.message || "";
+  loadTrades();
+}
+
+async function deleteTrade(id) {
+  if (!confirm("Delete this trade?")) return;
+  await fetch(`/api/trades/${id}`, {method:"DELETE"});
+  loadTrades();
+}
+
+function openClose(id) {
+  const trade = _trades.find(t => t.id === id);
+  document.getElementById("closeTid").value      = id;
+  document.getElementById("closePrice").value    = "";
+  document.getElementById("closeMsg").textContent = "";
+  document.getElementById("closePriceFetch").style.display = "none";
+  document.getElementById("closeSymLabel").textContent = trade ? trade.symbol : "";
+  document.getElementById("closeModal").classList.add("open");
+  // Pre-fill with current known price if available
+  if (trade && trade.current_price) {
+    document.getElementById("closePrice").placeholder = `Leave blank → $${Number(trade.current_price).toFixed(2)} (current)`;
+  } else {
+    document.getElementById("closePrice").placeholder = "Leave blank = fetch current price";
+  }
+}
+
+async function submitClose() {
+  const tid    = document.getElementById("closeTid").value;
+  const priceV = document.getElementById("closePrice").value.trim();
+  const price  = priceV ? parseFloat(priceV) : null;
+  const msg    = document.getElementById("closeMsg");
+  const btn    = document.getElementById("closeSaveBtn");
+  const fetch$ = document.getElementById("closePriceFetch");
+
+  if (priceV && isNaN(price)) { msg.textContent = "Enter a valid number or leave blank."; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Closing…";
+  if (!price) fetch$.style.display = "";   // show fetching indicator
+  msg.textContent = "";
+
+  const body = price ? {exit_price: price} : {};
+  const res  = await fetch(`/api/trades/${tid}/close`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+
+  fetch$.style.display = "none";
+  msg.textContent = data.message || data.error || "";
+  if (data.ok) { closeModal("closeModal"); loadTrades(); }
+  btn.disabled = false;
+  btn.textContent = "Close Trade";
+}
+
+function openEdit(id) {
+  const t = _trades.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById("editTid").value    = id;
+  document.getElementById("editStrat").value  = t.strategy_name || "";
+  document.getElementById("editNotes").value  = t.notes || "";
+  document.getElementById("editTags").value   = (t.tags||[]).join(", ");
+  document.getElementById("editMsg").textContent = "";
+  document.getElementById("editModal").classList.add("open");
+}
+
+async function submitEdit() {
+  const tid  = document.getElementById("editTid").value;
+  const msg  = document.getElementById("editMsg");
+  const body = {
+    strategy_name: document.getElementById("editStrat").value,
+    notes:         document.getElementById("editNotes").value,
+    tags:          document.getElementById("editTags").value,
+  };
+  const res  = await fetch(`/api/trades/${tid}`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+  const data = await res.json();
+  msg.textContent = data.message || "";
+  if (data.ok) { closeModal("editModal"); loadTrades(); }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-bg").forEach(m => m.addEventListener("click", e => { if(e.target===m) m.classList.remove("open"); }));
+
+function fmt(v)  { return v != null ? Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) : "—"; }
+function fmt$(v) { return (v>=0?"+":"")+`$${Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+function esc(s)  { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+loadTrades();
+</script>
+</body>
+</html>

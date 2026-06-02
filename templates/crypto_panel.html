@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crypto Monitor — AlphaTerminal</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #7d8590;
+    --green:    #1D9E75;
+    --red:      #f85149;
+    --amber:    #f59e0b;
+    --blue:     #58a6ff;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── nav ───────────────────────────────────────────────────── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .brand { font-weight: 700; font-size: 1.05rem; color: #fff; text-decoration: none; }
+  nav .brand span { color: var(--green); }
+  nav .sep { color: var(--border); }
+  nav .nav-links { display: flex; gap: 6px; margin-left: auto; }
+  nav .nav-links a {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--muted);
+    transition: color 0.15s, background 0.15s;
+  }
+  nav .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  nav .nav-links a.active { color: #fff; background: rgba(255,255,255,0.08); }
+
+  /* ── page shell ─────────────────────────────────────────────── */
+  .page { max-width: 1140px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .page-title { font-size: 1.4rem; font-weight: 700; }
+  .page-title small { font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-left: 8px; }
+
+  .btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { background: #21262d; border-color: #8b949e; }
+  .btn-primary { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-primary:hover { background: #17886a; border-color: #17886a; }
+
+  /* ── summary cards ──────────────────────────────────────────── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; }
+  .stat-card .value.up   { color: var(--green); }
+  .stat-card .value.down { color: var(--red); }
+
+  /* ── coin cards ─────────────────────────────────────────────── */
+  .coins-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .coin-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 22px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.18s, transform 0.18s;
+  }
+  .coin-card:hover { border-color: var(--coin-color, var(--blue)); transform: translateY(-2px); }
+  .coin-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--coin-color, var(--blue));
+  }
+
+  .coin-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .coin-name-row { display: flex; align-items: center; gap: 10px; }
+  .coin-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .coin-name { font-weight: 700; font-size: 1rem; }
+  .coin-sym  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .coin-price {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .coin-change {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .up   { color: var(--green); }
+  .down { color: var(--red); }
+  .flat { color: var(--muted); }
+
+  /* range bar */
+  .range-section { margin: 16px 0 12px; }
+  .range-label   { font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .range-track {
+    height: 5px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--green) 0%, var(--amber) 50%, var(--red) 100%);
+    position: relative;
+  }
+  .range-thumb {
+    position: absolute;
+    top: 50%; transform: translate(-50%, -50%);
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--coin-color, var(--blue));
+  }
+
+  /* stats grid */
+  .coin-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin-top: 14px;
+  }
+  .coin-stat { }
+  .coin-stat .s-label { font-size: 0.7rem; color: var(--muted); }
+  .coin-stat .s-val   { font-size: 0.88rem; font-weight: 600; margin-top: 1px; }
+
+  /* RSI pill */
+  .rsi-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .rsi-os   { background: rgba(29,158,117,0.15); color: var(--green); border: 1px solid rgba(29,158,117,0.3); }
+  .rsi-ob   { background: rgba(248,81,73,0.12);  color: var(--red);   border: 1px solid rgba(248,81,73,0.25); }
+  .rsi-neut { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+
+  /* perf row */
+  .perf-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .perf-chip {
+    flex: 1;
+    min-width: 70px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+  .perf-chip .pc-label { font-size: 0.65rem; color: var(--muted); }
+  .perf-chip .pc-val   { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
+
+  /* ── detail table (below cards) ─────────────────────────────── */
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.78rem;
+  }
+  .tbl-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody td { padding: 12px 14px; vertical-align: middle; }
+
+  /* ── toast ──────────────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1c2128; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 18px;
+    font-size: 0.85rem; color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 999;
+    max-width: 320px;
+  }
+  #toast.show { opacity: 1; }
+
+  /* ── loading spinner ────────────────────────────────────────── */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #loading-msg {
+    padding: 48px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .error-msg { color: var(--red); }
+
+  .last-updated {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 20px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">Alpha<span>Terminal</span></a>
+  <span class="sep">/</span>
+  <span style="font-size:.9rem;color:var(--muted);">Crypto</span>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/alerts">Alerts</a>
+    <a href="/fire">FIRE</a>
+    <a href="/crypto" class="active">Crypto</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">
+      Crypto Monitor
+      <small id="coin-count"></small>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="refresh-ts" style="font-size:.78rem;color:var(--muted);"></span>
+      <button class="btn" onclick="loadCoins(true)" id="refresh-btn">&#8635; Refresh</button>
+    </div>
+  </div>
+
+  <!-- summary row -->
+  <div class="summary-row" id="summary-row"></div>
+
+  <!-- coin cards -->
+  <div id="loading-msg"><span class="spinner"></span>Loading live crypto data&hellip;</div>
+  <div class="coins-grid" id="coins-grid" style="display:none;"></div>
+
+  <!-- comparison table -->
+  <div id="table-section" style="display:none;">
+    <div class="section-title">Comparison Table</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Coin</th>
+            <th>Price</th>
+            <th>24h</th>
+            <th>7d</th>
+            <th>30d</th>
+            <th>RSI</th>
+            <th>52W Low</th>
+            <th>52W High</th>
+            <th>52W Position</th>
+            <th>Market Cap</th>
+          </tr>
+        </thead>
+        <tbody id="coins-tbody"></tbody>
+      </table>
+    </div>
+    <div class="last-updated" id="last-updated-text"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let _coins = [];
+let _autoRefresh;
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(n, decimals = 2) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function fmtPrice(n) {
+  if (n == null) return '—';
+  if (n >= 1000) return '$' + fmt(n, 2);
+  if (n >= 1)    return '$' + fmt(n, 3);
+  return '$' + fmt(n, 4);
+}
+
+function fmtCap(n) {
+  if (n == null) return '—';
+  if (n >= 1e12) return '$' + fmt(n / 1e12, 2) + 'T';
+  if (n >= 1e9)  return '$' + fmt(n / 1e9, 2) + 'B';
+  if (n >= 1e6)  return '$' + fmt(n / 1e6, 2) + 'M';
+  return '$' + fmt(n, 0);
+}
+
+function chgClass(v) {
+  if (v == null) return 'flat';
+  return v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+}
+
+function chgStr(v, suffix = '%') {
+  if (v == null) return '—';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${fmt(v)}${suffix}`;
+}
+
+function rsiPill(rsi) {
+  if (rsi == null) return '—';
+  let cls = 'rsi-neut';
+  let label = rsi;
+  if (rsi < 35) { cls = 'rsi-os'; label = `${rsi} Oversold`; }
+  else if (rsi > 65) { cls = 'rsi-ob'; label = `${rsi} Overbought`; }
+  return `<span class="rsi-pill ${cls}">${label}</span>`;
+}
+
+function toast(msg, ms = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ── render ────────────────────────────────────────────────────────────────────
+
+function renderSummary(coins) {
+  const valid = coins.filter(c => c.price);
+  const gainers = valid.filter(c => (c.change_pct || 0) > 0).length;
+  const losers  = valid.filter(c => (c.change_pct || 0) < 0).length;
+  const totalCap = valid.reduce((s, c) => s + (c.market_cap || 0), 0);
+  const avgRsi  = valid.filter(c => c.rsi).length
+    ? (valid.reduce((s, c) => s + (c.rsi || 0), 0) / valid.filter(c => c.rsi).length).toFixed(1)
+    : null;
+
+  const cards = [
+    { label: 'Coins Tracked', value: coins.length, cls: '' },
+    { label: '24h Gainers',   value: gainers,       cls: 'up' },
+    { label: '24h Losers',    value: losers,         cls: losers > 0 ? 'down' : '' },
+    { label: 'Total Mkt Cap', value: fmtCap(totalCap), cls: '' },
+    { label: 'Avg RSI',       value: avgRsi != null ? avgRsi : '—', cls: '' },
+  ];
+
+  document.getElementById('summary-row').innerHTML = cards.map(c =>
+    `<div class="stat-card">
+      <div class="label">${c.label}</div>
+      <div class="value ${c.cls}">${c.value}</div>
+    </div>`
+  ).join('');
+}
+
+function renderCard(c) {
+  const rangePct = c.range_pct != null ? Math.max(0, Math.min(100, c.range_pct)) : null;
+  const rangeBar = rangePct != null
+    ? `<div class="range-section">
+        <div class="range-label">
+          <span>${fmtPrice(c.low_52w)} 52W Low</span>
+          <span>52W High ${fmtPrice(c.high_52w)}</span>
+        </div>
+        <div class="range-track">
+          <div class="range-thumb" style="left:${rangePct}%"></div>
+        </div>
+      </div>`
+    : '';
+
+  const perf = [
+    { label: '24h', val: c.change_pct },
+    { label: '7d',  val: c.change_7d  },
+    { label: '30d', val: c.change_30d },
+  ].map(p => `<div class="perf-chip">
+    <div class="pc-label">${p.label}</div>
+    <div class="pc-val ${chgClass(p.val)}">${chgStr(p.val)}</div>
+  </div>`).join('');
+
+  return `
+  <div class="coin-card" style="--coin-color:${c.color}">
+    <div class="coin-header">
+      <div class="coin-name-row">
+        <div class="coin-dot" style="background:${c.color}"></div>
+        <div>
+          <div class="coin-name">${c.name}</div>
+          <div class="coin-sym">${c.symbol}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="coin-price">${fmtPrice(c.price)}</div>
+        <div class="coin-change ${chgClass(c.change_pct)}">${chgStr(c.change_pct)}</div>
+      </div>
+    </div>
+
+    ${rangeBar}
+
+    <div class="perf-row">${perf}</div>
+
+    <div class="coin-stats">
+      <div class="coin-stat">
+        <div class="s-label">RSI (14d)</div>
+        <div class="s-val">${rsiPill(c.rsi)}</div>
+      </div>
+      <div class="coin-stat">
+        <div class="s-label">52W Position</div>
+        <div class="s-val">${c.range_pct != null ? c.range_pct + '%' : '—'}</div>
+      </div>
+      <div class="coin-stat">
+        <div class="s-label">Market Cap</div>
+        <div class="s-val">${fmtCap(c.market_cap)}</div>
+      </div>
+      <div class="coin-stat">
+        <div class="s-label">Volume 24h</div>
+        <div class="s-val">${fmtCap(c.volume_24h)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTableRow(c) {
+  const rangePct = c.range_pct;
+  const rangBar = rangePct != null
+    ? `<div style="display:flex;align-items:center;gap:6px;">
+        <div style="flex:1;height:4px;border-radius:2px;background:linear-gradient(to right,#1D9E75,#f59e0b,#f85149);position:relative;min-width:60px;">
+          <div style="position:absolute;top:50%;left:${Math.max(0,Math.min(100,rangePct))}%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px ${c.color}"></div>
+        </div>
+        <span style="font-size:.75rem;color:var(--muted);white-space:nowrap;">${rangePct}%</span>
+      </div>`
+    : '—';
+
+  return `<tr>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>
+        <div>
+          <div style="font-weight:600;">${c.name}</div>
+          <div style="font-size:.72rem;color:var(--muted);">${c.symbol}</div>
+        </div>
+      </div>
+    </td>
+    <td style="font-weight:600;">${fmtPrice(c.price)}</td>
+    <td class="${chgClass(c.change_pct)}">${chgStr(c.change_pct)}</td>
+    <td class="${chgClass(c.change_7d)}">${chgStr(c.change_7d)}</td>
+    <td class="${chgClass(c.change_30d)}">${chgStr(c.change_30d)}</td>
+    <td>${rsiPill(c.rsi)}</td>
+    <td style="color:var(--muted);">${fmtPrice(c.low_52w)}</td>
+    <td style="color:var(--muted);">${fmtPrice(c.high_52w)}</td>
+    <td style="min-width:120px;">${rangBar}</td>
+    <td>${fmtCap(c.market_cap)}</td>
+  </tr>`;
+}
+
+// ── data fetch ────────────────────────────────────────────────────────────────
+
+async function loadCoins(showToast = false) {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Loading…';
+
+  try {
+    const res  = await fetch('/api/crypto');
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      document.getElementById('loading-msg').innerHTML =
+        `<span class="error-msg">Error loading data: ${data.error || res.statusText}</span>`;
+      return;
+    }
+
+    _coins = data.coins || [];
+
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('coins-grid').style.display = '';
+    document.getElementById('table-section').style.display = '';
+
+    document.getElementById('coin-count').textContent = `${_coins.length} coins`;
+    document.getElementById('coins-grid').innerHTML = _coins.map(renderCard).join('');
+    document.getElementById('coins-tbody').innerHTML = _coins.map(renderTableRow).join('');
+
+    renderSummary(_coins);
+
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('refresh-ts').textContent = `Updated ${now}`;
+    document.getElementById('last-updated-text').textContent = `Last updated: ${now}`;
+
+    if (showToast) toast('Crypto data refreshed');
+  } catch (err) {
+    document.getElementById('loading-msg').innerHTML =
+      `<span class="error-msg">Network error: ${err.message}</span>`;
+    document.getElementById('loading-msg').style.display = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#8635; Refresh';
+  }
+}
+
+// auto-refresh every 5 minutes
+loadCoins();
+_autoRefresh = setInterval(() => loadCoins(), 5 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watchlist — AlphaTerminal</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0d1117; --surface:#161b22; --border:#30363d;
+  --text:#e6edf3; --muted:#7d8590; --green:#00d68f;
+  --red:#f04040; --amber:#f59e0b; --accent:#e05a2e;
+  --purple:#7c6af7;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ── nav ── */
+nav { display:flex; align-items:center; gap:12px; padding:14px 28px;
+      background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
+nav .brand { font-weight:700; font-size:1.05rem; color:#fff; text-decoration:none; }
+nav .brand span { color:#1D9E75; }
+.nav-links { display:flex; gap:6px; margin-left:auto; }
+.nav-links a { padding:5px 12px; border-radius:6px; font-size:0.83rem;
+    text-decoration:none; color:var(--muted); transition:color .15s,background .15s; }
+.nav-links a:hover { color:var(--text); background:rgba(255,255,255,.05); }
+.nav-links a.active { color:#fff; background:rgba(255,255,255,.08); }
+
+/* ── layout ── */
+.page { max-width:1400px; margin:0 auto; padding:24px 20px 60px; }
+
+/* ── stat cards ── */
+.stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+.stat-card .lbl { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
+.stat-card .val { font-size:1.3rem; font-weight:700; }
+.val.up { color:var(--green); } .val.down { color:var(--red); } .val.neutral { color:var(--text); } .val.amber { color:var(--amber); }
+
+/* ── toolbar ── */
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.toolbar input { background:var(--surface); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:7px 12px; font-size:0.85rem; outline:none; width:200px; }
+.toolbar input:focus { border-color:var(--accent); }
+.sep-v { width:1px; height:22px; background:var(--border); }
+
+.btn { padding:7px 14px; border-radius:7px; font-size:0.82rem; font-weight:500; cursor:pointer;
+       border:1px solid var(--border); background:var(--surface); color:var(--text); transition:background .15s; white-space:nowrap; }
+.btn:hover { background:#21262d; }
+.btn:disabled { opacity:.45; cursor:default; }
+.btn-primary  { background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn-primary:hover { background:#c44a22; }
+.btn-green    { background:#0d2b1a; border-color:#00d68f44; color:var(--green); }
+.btn-green:hover { background:#0d3d24; }
+.btn-sm { padding:3px 8px; font-size:0.7rem; border-radius:5px; font-weight:600; cursor:pointer; border:1px solid; transition:background .12s; }
+
+/* ── watchlist pill strip ── */
+.wl-strip { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; margin-bottom:14px; }
+.wl-strip-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.wl-strip-hdr span { font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.wl-pills { display:flex; flex-wrap:wrap; gap:5px; }
+.wl-pill { display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,.04);
+           border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.78rem; }
+.wl-pill .rm { cursor:pointer; color:var(--muted); font-size:0.68rem; }
+.wl-pill .rm:hover { color:var(--red); }
+.add-row { display:flex; gap:6px; margin-top:10px; }
+.add-row input { width:140px; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); border-radius:7px; padding:5px 9px; font-size:0.83rem;
+    outline:none; text-transform:uppercase; }
+.add-row input:focus { border-color:var(--green); }
+
+/* ── analyst progress bar ── */
+.analyst-bar { background:var(--surface); border:1px solid var(--border); border-radius:8px;
+               padding:10px 14px; margin-bottom:12px; display:none; align-items:center; gap:10px; flex-wrap:wrap; }
+.analyst-bar.open { display:flex; }
+.prog-wrap { flex:1; height:6px; background:#1e2536; border-radius:3px; min-width:120px; }
+.prog-fill { height:100%; background:var(--green); border-radius:3px; transition:width .4s; }
+.analyst-bar .msg { font-size:0.78rem; color:var(--muted); }
+
+/* ── table ── */
+.tbl-wrap { overflow-x:auto; }
+table.wt { width:100%; border-collapse:collapse; font-size:0.83rem; }
+table.wt th { background:var(--surface); color:var(--muted); padding:9px 10px;
+    border-bottom:1px solid var(--border); text-align:left; white-space:nowrap;
+    font-size:0.67rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    cursor:pointer; user-select:none; }
+table.wt th:hover { color:var(--text); }
+table.wt th.sort-active { color:var(--accent); }
+table.wt th .arr { font-size:.58rem; margin-left:3px; opacity:.35; }
+table.wt th.sort-active .arr { opacity:1; }
+table.wt td { background:var(--bg); color:var(--text); padding:10px 10px;
+    border-bottom:1px solid var(--surface); vertical-align:middle; }
+table.wt tr:hover td { background:#13181f; }
+
+.rsi-pill { display:inline-block; padding:2px 8px; border-radius:16px; font-weight:700; font-size:0.8rem; }
+.rec-badge { display:inline-block; padding:2px 9px; border-radius:12px; font-weight:700; font-size:0.72rem; white-space:nowrap; }
+.conf-bar-wrap { width:48px; height:5px; background:#1e2536; border-radius:3px; display:inline-block; vertical-align:middle; margin-right:5px; }
+.conf-bar { height:100%; border-radius:3px; }
+.stale-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+.tv-link { color:var(--green); font-weight:600; text-decoration:none; }
+.tv-link:hover { text-decoration:underline; }
+
+/* ── AI analysis panel ── */
+.section-divider { border:none; border-top:1px solid var(--border); margin:28px 0; }
+.analyze-bar { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.analyze-bar input { width:150px; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); border-radius:8px; padding:7px 12px; font-size:0.85rem;
+    outline:none; text-transform:uppercase; }
+.analyze-bar input:focus { border-color:var(--accent); }
+
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border);
+           border-top-color:var(--green); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+#toast { position:fixed; bottom:22px; right:22px; background:#1c2128; border:1px solid var(--border);
+         border-radius:8px; padding:9px 14px; font-size:0.83rem; opacity:0; pointer-events:none;
+         z-index:999; transition:opacity .25s; max-width:280px; }
+#toast.show { opacity:1; }
+
+.section-title { font-size:0.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">Alpha<span>Terminal</span></a>
+  <span style="color:var(--border)">/</span>
+  <span style="font-size:.88rem;color:var(--muted);">Watchlist</span>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/alerts">Alerts</a>
+    <a href="/watchlist" class="active">Watchlist</a>
+    <a href="/trades">Trades</a>
+    <a href="/fire">FIRE</a>
+    <a href="/new-finds">New Finds</a>
+    <a href="/algobot">AlgoBots</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ── Stat cards ── -->
+  <div class="stat-row" id="stat-row">
+    <div class="stat-card"><div class="lbl">Watchlist</div><div class="val neutral" id="s-size">—</div></div>
+    <div class="stat-card"><div class="lbl">Oversold RSI &lt;35</div><div class="val up" id="s-oversold">—</div></div>
+    <div class="stat-card"><div class="lbl">Positive Today</div><div class="val up" id="s-positive">—</div></div>
+    <div class="stat-card"><div class="lbl">Avg Daily Change</div><div class="val neutral" id="s-avgchg">—</div></div>
+    <div class="stat-card"><div class="lbl">Fear &amp; Greed</div><div class="val neutral" id="s-fg" style="font-size:.95rem;">—</div></div>
+    <div class="stat-card"><div class="lbl">Buy Rated</div><div class="val up" id="s-buy">—</div></div>
+    <div class="stat-card"><div class="lbl">Avg Analyst Upside</div><div class="val up" id="s-upside">—</div></div>
+    <div class="stat-card"><div class="lbl">Analyst Coverage</div><div class="val neutral" id="s-coverage">—</div></div>
+  </div>
+
+  <!-- ── Watchlist pill manager ── -->
+  <div class="wl-strip">
+    <div class="wl-strip-hdr">
+      <span id="wl-count-lbl">Loading…</span>
+      <button class="btn" style="font-size:.75rem;padding:4px 9px;" onclick="toggleWlPanel()">Manage ▾</button>
+    </div>
+    <div id="wl-pills" class="wl-pills"></div>
+    <div id="wl-manage" style="display:none;margin-top:10px;">
+      <div class="add-row">
+        <input id="add-sym-in" placeholder="TICKER" maxlength="10" onkeydown="if(event.key==='Enter')addSym()">
+        <button class="btn btn-primary" onclick="addSym()">+ Add</button>
+      </div>
+      <div id="wl-msg" style="font-size:.78rem;color:var(--muted);margin-top:5px;"></div>
+    </div>
+  </div>
+
+  <!-- ── Analyst refresh progress ── -->
+  <div class="analyst-bar" id="analyst-bar">
+    <span class="spinner"></span>
+    <div class="prog-wrap"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <span class="msg" id="analyst-bar-msg">Fetching analyst data…</span>
+    <span id="analyst-bar-detail" style="font-size:.72rem;color:var(--muted);margin-left:auto;"></span>
+  </div>
+
+  <!-- ── Main toolbar ── -->
+  <div class="toolbar">
+    <input id="filter-in" placeholder="Filter tickers…" oninput="filterTable(this.value)">
+    <button class="btn btn-primary" onclick="loadMarketData(true)" id="refresh-btn">&#8635; Market Data</button>
+    <div class="sep-v"></div>
+    <button class="btn btn-green" onclick="refreshAllAnalyst()" id="analyst-btn">&#10022; Refresh All Analyst</button>
+    <span id="analyst-ts" style="font-size:.73rem;color:var(--muted);"></span>
+    <span id="refresh-ts" style="font-size:.73rem;color:var(--muted);margin-left:8px;"></span>
+  </div>
+
+  <!-- ── Table ── -->
+  <div id="table-loading" style="padding:40px;text-align:center;color:var(--muted);">
+    <span class="spinner"></span>Loading market data…
+  </div>
+  <div id="tbl-section" style="display:none;">
+    <div class="tbl-wrap">
+      <table class="wt" id="main-tbl" data-sort-col="5" data-sort-dir="asc">
+        <thead><tr>
+          <th onclick="sortTbl(0)">Ticker<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(1)">Price<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(2)">Today %<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(3)">7D %<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(4)">30D %<span class="arr">⇅</span></th>
+          <th class="sort-active" onclick="sortTbl(5)">RSI<span class="arr">▲</span></th>
+          <th onclick="sortTbl(6)">Recommendation<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(7)">Analyst Target<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(8)">Upside %<span class="arr">⇅</span></th>
+          <th onclick="sortTbl(9)">Confidence<span class="arr">⇅</span></th>
+          <th>Latest News</th>
+          <th onclick="sortTbl(11)">Cached<span class="arr">⇅</span></th>
+          <th>Refresh</th>
+        </tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);margin-top:8px;padding:0 2px;">
+      * Analyst data cached 5 days · click ↻ per row or "Refresh All Analyst" to update
+    </div>
+  </div>
+
+  <!-- ── AI Deep Analysis ── -->
+  <hr class="section-divider">
+  <div class="section-title">AI Deep Analysis</div>
+  <div class="analyze-bar">
+    <input id="analyze-in" placeholder="e.g. AAPL" maxlength="10" onkeydown="if(event.key==='Enter')analyzeStock()">
+    <button class="btn btn-primary" onclick="analyzeStock()" id="analyze-btn">Analyze</button>
+    <button class="btn" onclick="clearAnalysis()">Clear</button>
+    <span id="analyze-status" style="font-size:.8rem;color:var(--muted);"></span>
+  </div>
+  <div id="chart-embed"></div>
+  <div id="analysis-out"></div>
+
+</div><!-- /page -->
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let _marketRows  = [];   // from /api/watchlist/data
+let _analystData = {};   // from /api/watchlist/analyst-data  { SYM: {...} }
+let _symbols     = [];
+let _pollTimer   = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt  = (n,d=2) => n==null||isNaN(n) ? '—' : Number(n).toFixed(d);
+const fmtP = n => n==null ? '—' : (n>=0?'+':'')+fmt(n)+'%';
+const cCls = n => n==null ? '' : n>=0 ? 'up' : 'down';
+function toast(msg, ms=3000) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+// ── RSI pill ──────────────────────────────────────────────────────────────────
+function rsiPill(rsi) {
+  if (rsi==null) return '<span style="color:var(--muted)">—</span>';
+  const [bg,fg] = rsi<30 ? ['#0d2b1a','#00d68f'] : rsi<50 ? ['#1a200d','#a3d68f']
+                         : rsi<70 ? ['#1a1a0d','#d6c56f'] : ['#2b0d0d','#f04040'];
+  return `<span class="rsi-pill" style="background:${bg};color:${fg};border:1px solid ${fg}44;" data-rsi="${fmt(rsi,3)}">${fmt(rsi,1)}</span>`;
+}
+
+// ── Recommendation badge ──────────────────────────────────────────────────────
+const REC_STYLE = {
+  'Strong Buy': ['#0d2b1a','#00d68f'],
+  'Buy':        ['#0d2216','#34d399'],
+  'Hold':       ['#2b220d','#f59e0b'],
+  'Sell':       ['#2b1a0d','#f87171'],
+  'Strong Sell':['#2b0d0d','#f04040'],
+  '—':          ['#1e2536','#4a5568'],
+};
+function recBadge(rec) {
+  const [bg,fg] = REC_STYLE[rec] || REC_STYLE['—'];
+  const sort = {'Strong Buy':0,'Buy':1,'Hold':2,'Sell':3,'Strong Sell':4}[rec] ?? 9;
+  return `<span class="rec-badge" style="background:${bg};color:${fg};border:1px solid ${fg}44;" data-sort="${sort}">${rec||'—'}</span>`;
+}
+
+// ── Confidence bar ────────────────────────────────────────────────────────────
+function confBar(conf) {
+  if (!conf) return '<span style="color:var(--muted)">—</span>';
+  const fg = conf>=7 ? '#00d68f' : conf>=5 ? '#f59e0b' : '#f04040';
+  return `<span data-sort="${conf}"><span class="conf-bar-wrap"><span class="conf-bar" style="width:${conf*10}%;background:${fg};"></span></span><span style="color:${fg};font-weight:700;font-size:.82rem;">${conf}</span><span style="color:var(--muted);font-size:.65rem;">/10</span></span>`;
+}
+
+// ── Analyst cache age ─────────────────────────────────────────────────────────
+function ageLabel(a) {
+  if (!a) return { html:`<span style="color:var(--muted);font-size:.72rem;">Not cached</span>`, sort:9999 };
+  const dotColor = a.stale ? '#f04040' : '#00d68f';
+  const label    = a.age_hours == null ? 'No data'
+                 : a.age_hours < 1    ? 'Just now'
+                 : a.age_hours < 24   ? `${Math.round(a.age_hours)}h ago`
+                 : `${Math.round(a.age_hours/24)}d ago`;
+  return {
+    html: `<span data-sort="${a.age_hours??9999}"><span class="stale-dot" style="background:${dotColor};"></span><span style="font-size:.72rem;color:var(--muted);">${label}</span></span>`,
+    sort: a.age_hours ?? 9999,
+  };
+}
+
+// ── Merge and render table ────────────────────────────────────────────────────
+function mergedRows() {
+  return _marketRows.map(r => ({
+    ...r,
+    analyst: _analystData[r.symbol] || {},
+  }));
+}
+
+function rowHtml(d) {
+  if (d.error) return `<tr><td><b>${d.symbol}</b></td><td colspan="12" style="color:var(--red);">Data unavailable</td></tr>`;
+  const a    = d.analyst || {};
+  const vol  = d.below_volume_profile;
+  const age  = ageLabel(a);
+  const news = a.news ? `<span style="font-size:.75rem;color:var(--muted);max-width:200px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(a.news)}">${esc(a.news.slice(0,60))}${a.news.length>60?'…':''}</span>` : '<span style="color:var(--muted)">—</span>';
+  return `<tr data-sym="${d.symbol}">
+    <td><a class="tv-link" href="${d.tradingview_url||'#'}" target="_blank">${d.symbol}</a></td>
+    <td style="font-weight:600;" data-sort="${d.price||0}">$${fmt(d.price)}</td>
+    <td class="${cCls(d.change_pct)}" data-sort="${d.change_pct??-9999}">${fmtP(d.change_pct)}</td>
+    <td class="${cCls(d.change_7d)}"  data-sort="${d.change_7d??-9999}">${fmtP(d.change_7d)}</td>
+    <td class="${cCls(d.change_30d)}" data-sort="${d.change_30d??-9999}">${fmtP(d.change_30d)}</td>
+    <td data-sort="${d.rsi??9999}">${rsiPill(d.rsi)}</td>
+    <td>${recBadge(a.recommendation || '—')}</td>
+    <td data-sort="${a.target??0}" style="color:var(--text);font-weight:600;">${a.target ? '$'+fmt(a.target) : '<span style="color:var(--muted)">—</span>'}</td>
+    <td data-sort="${a.upside_pct??-9999}" class="${cCls(a.upside_pct)}">${a.upside_pct!=null ? fmtP(a.upside_pct) : '<span style="color:var(--muted)">—</span>'}</td>
+    <td>${confBar(a.confidence)}</td>
+    <td>${news}</td>
+    <td data-sort="${age.sort}">${age.html}</td>
+    <td><button class="btn-sm" style="background:#1e1a36;color:var(--purple);border-color:#7c6af744;" onclick="refreshOne('${d.symbol}', this)" title="Refresh analyst for ${d.symbol}">↻</button></td>
+  </tr>`;
+}
+
+function renderTable(rows) {
+  document.getElementById('tbl-body').innerHTML = rows.map(rowHtml).join('');
+}
+
+function filterTable(q) {
+  q = q.trim().toUpperCase();
+  const rows = mergedRows();
+  renderTable(q ? rows.filter(r => r.symbol.includes(q)) : rows);
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+function sortTbl(col) {
+  const tbl = document.getElementById('main-tbl');
+  const prev = parseInt(tbl.dataset.sortCol);
+  const dir  = prev===col && tbl.dataset.sortDir==='asc' ? 'desc' : 'asc';
+  const tbody = tbl.tBodies[0];
+  Array.from(tbody.rows)
+    .sort((a,b) => {
+      const av = a.cells[col].dataset.sort ?? a.cells[col].textContent.trim();
+      const bv = b.cells[col].dataset.sort ?? b.cells[col].textContent.trim();
+      const an = parseFloat(String(av).replace(/[^0-9.\-]/g,''));
+      const bn = parseFloat(String(bv).replace(/[^0-9.\-]/g,''));
+      return (!isNaN(an)&&!isNaN(bn)) ? (dir==='asc'?an-bn:bn-an) : (dir==='asc'?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av)));
+    })
+    .forEach(r => tbody.appendChild(r));
+  tbl.dataset.sortCol = col;
+  tbl.dataset.sortDir = dir;
+  tbl.querySelectorAll('th').forEach((th,i) => {
+    th.classList.toggle('sort-active', i===col);
+    const a = th.querySelector('.arr');
+    if (a) a.textContent = i===col ? (dir==='asc'?'▲':'▼') : '⇅';
+  });
+}
+
+// ── Stats cards ───────────────────────────────────────────────────────────────
+function updateStats(rows) {
+  const valid = rows.filter(r => !r.error);
+  document.getElementById('s-size').textContent = _symbols.length;
+  document.getElementById('s-oversold').textContent = valid.filter(r => (r.rsi||100) < 35).length;
+  const pos  = valid.filter(r => (r.change_pct||0) >= 0).length;
+  document.getElementById('s-positive').textContent = pos;
+  const avgC = valid.length ? valid.reduce((s,r) => s+(r.change_pct||0), 0)/valid.length : 0;
+  const el   = document.getElementById('s-avgchg');
+  el.textContent = fmtP(avgC); el.className = 'val '+(avgC>=0?'up':'down');
+
+  // Analyst stats
+  const analysed = Object.values(_analystData).filter(a => a.recommendation && a.recommendation !== '—');
+  const buys = analysed.filter(a => a.recommendation?.includes('Buy')).length;
+  document.getElementById('s-buy').textContent = buys + ' / ' + analysed.length;
+  const upsides = analysed.filter(a => a.upside_pct != null).map(a => a.upside_pct);
+  const avgUp   = upsides.length ? upsides.reduce((s,v) => s+v, 0)/upsides.length : null;
+  const upEl = document.getElementById('s-upside');
+  upEl.textContent = avgUp != null ? fmtP(avgUp) : '—';
+  upEl.className = 'val ' + (avgUp==null ? 'neutral' : avgUp>=0 ? 'up' : 'down');
+  document.getElementById('s-coverage').textContent = analysed.length + ' / ' + _symbols.length;
+}
+
+// ── Load market data ──────────────────────────────────────────────────────────
+async function loadMarketData(manual=false) {
+  document.getElementById('table-loading').style.display = '';
+  document.getElementById('tbl-section').style.display   = 'none';
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Loading…';
+  try {
+    const res  = await fetch('/api/watchlist/data');
+    const data = await res.json();
+    _marketRows = (data.rows||[]).sort((a,b) => (a.rsi??9999) - (b.rsi??9999));
+    renderTable(mergedRows());
+    updateStats(_marketRows);
+    document.getElementById('table-loading').style.display = 'none';
+    document.getElementById('tbl-section').style.display = '';
+    document.getElementById('refresh-ts').textContent = 'Market: ' + new Date().toLocaleTimeString();
+    if (manual) toast('Market data refreshed');
+  } catch(e) {
+    document.getElementById('table-loading').textContent = 'Error: '+e.message;
+  } finally {
+    btn.disabled=false; btn.innerHTML='&#8635; Market Data';
+  }
+}
+
+// ── Load analyst data from MongoDB (fast, no API calls) ───────────────────────
+async function loadAnalystData() {
+  try {
+    const res  = await fetch('/api/watchlist/analyst-data');
+    _analystData = await res.json();
+    renderTable(mergedRows());
+    updateStats(_marketRows);
+    const freshCount = Object.values(_analystData).filter(a => !a.stale && a.recommendation).length;
+    document.getElementById('analyst-ts').textContent = `Analyst: ${freshCount} fresh`;
+  } catch(e) { /* silent */ }
+}
+
+// ── Refresh All analyst (background + polling) ────────────────────────────────
+async function refreshAllAnalyst() {
+  const btn = document.getElementById('analyst-btn');
+  btn.disabled = true; btn.textContent = '…Starting';
+  try {
+    const res  = await fetch('/api/watchlist/refresh-analyst', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const data = await res.json();
+    if (!data.ok) { toast('Error: ' + data.error); btn.disabled=false; btn.textContent='↻ Refresh All Analyst'; return; }
+    toast(`Refreshing ${data.count} symbols in background…`);
+    startAnalystPoll(data.count);
+  } catch(e) { toast('Network error'); btn.disabled=false; btn.textContent='↻ Refresh All Analyst'; }
+}
+
+// ── Refresh single symbol ─────────────────────────────────────────────────────
+async function refreshOne(symbol, btn) {
+  btn.textContent = '…'; btn.disabled = true;
+  try {
+    const res  = await fetch('/api/watchlist/refresh-analyst', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({symbol}),
+    });
+    const data = await res.json();
+    if (!data.ok) { toast('Error: '+data.error); btn.textContent='↻'; btn.disabled=false; return; }
+    toast(`Refreshing ${symbol}…`);
+    startAnalystPoll(1, btn, symbol);
+  } catch(e) { toast('Network error'); btn.textContent='↻'; btn.disabled=false; }
+}
+
+// ── Poll analyst status ───────────────────────────────────────────────────────
+function startAnalystPoll(total, singleBtn=null, singleSym=null) {
+  clearInterval(_pollTimer);
+  const bar    = document.getElementById('analyst-bar');
+  const fill   = document.getElementById('prog-fill');
+  const msg    = document.getElementById('analyst-bar-msg');
+  const detail = document.getElementById('analyst-bar-detail');
+  bar.classList.add('open');
+
+  _pollTimer = setInterval(async () => {
+    try {
+      const res  = await fetch('/api/alerts/analyst-status');
+      const data = await res.json();
+
+      const done = data.done?.length || 0;
+      const pct  = total > 0 ? Math.round(done/total*100) : 0;
+      fill.style.width = pct + '%';
+      msg.textContent  = data.running ? `Fetching… ${done}/${total}` : `Done — ${done} updated`;
+      detail.textContent = data.pending?.slice(0,4).join(', ') || '';
+
+      if (!data.running) {
+        clearInterval(_pollTimer);
+        bar.classList.remove('open');
+        await loadAnalystData();   // reload from MongoDB
+        toast(`Analyst data updated for ${done} symbol(s)`);
+        document.getElementById('analyst-btn').disabled = false;
+        document.getElementById('analyst-btn').textContent = '↻ Refresh All Analyst';
+        if (singleBtn) { singleBtn.textContent='↻'; singleBtn.disabled=false; }
+      }
+    } catch(e) { /* keep polling */ }
+  }, 2500);
+}
+
+// ── Watchlist CRUD ────────────────────────────────────────────────────────────
+async function loadSymbols() {
+  const res  = await fetch('/api/watchlist/symbols');
+  const data = await res.json();
+  _symbols   = data.symbols || [];
+  document.getElementById('wl-count-lbl').textContent = `${_symbols.length} symbols`;
+  document.getElementById('wl-pills').innerHTML = _symbols.map(s =>
+    `<div class="wl-pill">${s}<span class="rm" onclick="removeSym('${s}')">&times;</span></div>`
+  ).join('');
+}
+
+let _wlOpen = false;
+function toggleWlPanel() {
+  _wlOpen = !_wlOpen;
+  document.getElementById('wl-manage').style.display = _wlOpen ? '' : 'none';
+}
+
+async function addSym() {
+  const inp = document.getElementById('add-sym-in');
+  const sym = inp.value.trim().toUpperCase();
+  if (!sym) return;
+  const res = await fetch('/api/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({symbol:sym})});
+  const d   = await res.json();
+  document.getElementById('wl-msg').textContent = d.message || (d.ok ? 'Added '+sym : d.error);
+  inp.value = '';
+  await loadSymbols();
+}
+
+async function removeSym(sym) {
+  if (!confirm(`Remove ${sym}?`)) return;
+  await fetch(`/api/watchlist/${sym}`, {method:'DELETE'});
+  toast('Removed '+sym);
+  await loadSymbols();
+}
+
+// ── Fear & Greed ──────────────────────────────────────────────────────────────
+async function loadFG() {
+  try {
+    const d = await (await fetch('/api/fear_greed')).json();
+    document.getElementById('s-fg').textContent = `${d.value} — ${d.label}`;
+  } catch(_) {}
+}
+
+// ── AI Deep Analysis ──────────────────────────────────────────────────────────
+async function analyzeStock() {
+  const ticker = document.getElementById('analyze-in').value.trim().toUpperCase();
+  if (!ticker) return;
+  const btn    = document.getElementById('analyze-btn');
+  const status = document.getElementById('analyze-status');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Analyzing…';
+  status.textContent='';
+  document.getElementById('chart-embed').innerHTML = '';
+  document.getElementById('analysis-out').innerHTML = '';
+  try {
+    const d = await (await fetch(`/api/analyze/${ticker}`)).json();
+    if (d.error) { status.textContent='Error: '+d.error; return; }
+    document.getElementById('chart-embed').innerHTML  = d.chart_html||'';
+    document.getElementById('analysis-out').innerHTML = d.analysis_html||'';
+    status.textContent = `Analysis ready for ${ticker}`;
+  } catch(e) { status.textContent='Network error: '+e.message; }
+  finally { btn.disabled=false; btn.textContent='Analyze'; }
+}
+function clearAnalysis() {
+  document.getElementById('analyze-in').value='';
+  document.getElementById('chart-embed').innerHTML='';
+  document.getElementById('analysis-out').innerHTML='';
+  document.getElementById('analyze-status').textContent='';
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadSymbols();
+  loadFG();
+  await loadMarketData();
+  await loadAnalystData();   // loads cached data from MongoDB immediately
+})();
+</script>
+</body>
+</html>

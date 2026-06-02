@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Strategy Lab — AlphaTerminal</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+
+/* nav */
+.nav{background:#161b22;border-bottom:1px solid #21262d;padding:0 24px;display:flex;align-items:center;gap:22px;height:52px}
+.nav-brand{font-size:1.1rem;font-weight:700;color:#fff;text-decoration:none}.nav-brand span{color:#1D9E75}
+.nav a{color:#7d8590;text-decoration:none;font-size:0.875rem;transition:color .15s}
+.nav a:hover,.nav a.active{color:#e6edf3}.nav-sep{flex:1}
+
+/* layout */
+.wrap{max-width:1400px;margin:0 auto;padding:24px 20px}
+.page-title{font-size:1.55rem;font-weight:700;margin-bottom:3px}
+.page-sub{color:#7d8590;font-size:0.875rem;margin-bottom:22px}
+
+/* mode toggle */
+.mode-toggle{display:flex;gap:0;margin-bottom:20px;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:4px;width:fit-content}
+.mode-btn{padding:8px 22px;border:none;border-radius:7px;font-size:0.875rem;font-weight:600;cursor:pointer;background:transparent;color:#7d8590;transition:all .15s}
+.mode-btn.active{background:#1D9E75;color:#fff}
+
+/* two-col grid */
+.grid{display:grid;grid-template-columns:400px 1fr;gap:22px;align-items:start}
+
+/* left panel */
+.lp{background:#161b22;border:1px solid #21262d;border-radius:14px;padding:22px}
+.section-title{font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;margin-bottom:12px;margin-top:18px}
+.section-title:first-child{margin-top:0}
+
+label{font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:4px;margin-top:10px}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;
+  color:#e6edf3;padding:8px 10px;font-size:0.84rem;font-family:inherit
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#1D9E75}
+textarea{resize:vertical;font-family:"SF Mono","Fira Code",monospace;font-size:0.76rem}
+.ta-strategy{min-height:240px}
+.ta-idea{min-height:80px}
+
+.drop-zone{border:2px dashed #30363d;border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:6px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1D9E75}
+.drop-zone p{color:#7d8590;font-size:0.78rem;margin-top:4px}
+.drop-zone input{display:none}
+
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.btn-run{width:100%;margin-top:18px;padding:12px;background:#1D9E75;border:none;border-radius:8px;
+  color:#fff;font-size:0.95rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-run:hover{background:#179060}
+.btn-run:disabled{background:#1a3a30;color:#4a5568;cursor:not-allowed}
+
+/* progress */
+.prog-wrap{margin-top:14px;display:none}
+.prog-bg{background:#21262d;border-radius:20px;height:6px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#1D9E75,#3b82f6);border-radius:20px;transition:width .4s}
+.prog-step{font-size:0.76rem;color:#7d8590;margin-top:5px}
+.log-box{margin-top:8px;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:8px;
+  height:120px;overflow-y:auto;font-size:0.7rem;color:#94a3b8;font-family:"SF Mono","Fira Code",monospace}
+
+/* right panel / results */
+.rp{display:none}
+
+/* tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid #21262d;margin-bottom:18px;flex-wrap:wrap}
+.tab-btn{padding:9px 14px;background:none;border:none;color:#7d8590;font-size:0.82rem;
+  cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;margin-bottom:-1px;white-space:nowrap}
+.tab-btn.active{color:#e6edf3;border-bottom-color:#a855f7}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* stat grid */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:12px 14px}
+.stat-lbl{font-size:0.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a5568;margin-bottom:5px}
+.stat-val{font-size:1.3rem;font-weight:700}
+.pos{color:#00d68f}.neg{color:#f04040}.neu{color:#e2e8f4}.warn{color:#f7931a}
+
+/* chart */
+.chart-box{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px;margin-bottom:16px}
+.chart-box canvas{max-height:260px}
+.chart-lbl{font-size:0.7rem;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em}
+
+/* regime pills */
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.pill{background:#161b22;border:1px solid #21262d;border-radius:20px;padding:5px 12px;font-size:0.76rem}
+.pill strong{color:#e2e8f4}
+
+/* verdict banner */
+.verdict{border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:0.9rem;font-weight:600;display:flex;align-items:center;gap:10px}
+.verdict.trade{background:#0d2b1a;border:1px solid #00d68f;color:#00d68f}
+.verdict.paper{background:#1a1f0d;border:1px solid #f7931a;color:#f7931a}
+.verdict.reject{background:#2b0d0d;border:1px solid #f04040;color:#f04040}
+.verdict.needs{background:#1a1a2b;border:1px solid #3b82f6;color:#3b82f6}
+
+/* agent cards */
+.agent-list{display:flex;flex-direction:column;gap:12px}
+.agent-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 18px}
+.agent-header{font-weight:600;font-size:0.9rem;margin-bottom:8px}
+.agent-body{font-size:0.83rem;color:#94a3b8;line-height:1.65;white-space:pre-wrap}
+
+/* consensus */
+.consensus-box{background:#161b22;border:1px solid #a855f744;border-radius:10px;padding:18px;margin-bottom:16px}
+.consensus-score{font-size:2.2rem;font-weight:700;color:#a855f7}
+.consensus-label{font-size:0.7rem;color:#4a5568;text-transform:uppercase;letter-spacing:.08em}
+.consensus-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.cg-item{background:#0d1117;border-radius:8px;padding:10px 14px}
+.cg-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;color:#4a5568;margin-bottom:6px}
+.cg-body{font-size:0.82rem;color:#c9d1d9;line-height:1.6}
+
+/* issues */
+.issue-card{background:#161b22;border-radius:10px;padding:12px 16px;margin-bottom:10px;border-left:3px solid #30363d}
+.issue-card.critical{border-left-color:#f04040}
+.issue-card.high{border-left-color:#f7931a}
+.issue-card.medium{border-left-color:#e2cc6d}
+.issue-card.low{border-left-color:#00d68f}
+.issue-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.issue-type{font-size:0.78rem;font-weight:600;color:#e2e8f4}
+.sev-badge{font-size:0.68rem;padding:2px 8px;border-radius:10px;font-weight:600}
+.sev-Critical{background:#2b0d0d;color:#f04040}.sev-High{background:#2b1a0d;color:#f7931a}
+.sev-Medium{background:#2b260d;color:#e2cc6d}.sev-Low{background:#0d2b1a;color:#00d68f}
+.issue-desc{font-size:0.82rem;color:#94a3b8;margin-bottom:4px}
+.issue-fix{font-size:0.78rem;color:#4a5568}
+
+/* evolution */
+.evo-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 18px;margin-bottom:12px}
+.evo-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ver-badge{background:#1a1035;color:#a855f7;font-size:0.76rem;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #a855f744}
+.ver-badge.best{background:#0d2b1a;color:#00d68f;border-color:#00d68f44}
+.improve-tag{font-size:0.72rem}
+.evo-changes{font-size:0.8rem;color:#94a3b8;margin-bottom:8px}
+.evo-changes li{margin-left:16px;margin-top:3px}
+.delta-row{display:flex;gap:14px;flex-wrap:wrap}
+.delta-item{display:flex;flex-direction:column;gap:1px}
+.dk{font-size:0.65rem;text-transform:uppercase;letter-spacing:.06em;color:#4a5568}
+.dv{font-size:0.88rem;font-weight:600}
+
+/* comparison table */
+.cmp-table{width:100%;border-collapse:collapse;font-size:0.82rem}
+.cmp-table th{background:#161b22;color:#4a5568;padding:9px 12px;text-align:left;
+  font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid #21262d}
+.cmp-table td{background:#0d1117;padding:10px 12px;border-bottom:1px solid #161b22}
+.cmp-table tr:hover td{background:#13181f}
+.best-col{background:#0d1a12 !important;border-left:2px solid #00d68f}
+
+/* code panel */
+.code-box{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:16px;position:relative}
+.code-box pre{font-family:"SF Mono","Fira Code",monospace;font-size:0.76rem;color:#c9d1d9;
+  white-space:pre-wrap;word-break:break-all;max-height:600px;overflow-y:auto}
+.copy-btn{position:absolute;top:10px;right:10px;background:#21262d;border:none;border-radius:6px;
+  color:#94a3b8;font-size:0.72rem;padding:4px 10px;cursor:pointer}
+.copy-btn:hover{background:#30363d;color:#e2e8f4}
+
+/* final report */
+.report-box{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:22px;
+  font-size:0.875rem;line-height:1.75;color:#c9d1d9;white-space:pre-wrap}
+
+/* concept panel */
+.concept-box{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:18px;margin-bottom:16px}
+.concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.concept-item{background:#0d1117;border-radius:8px;padding:10px 14px}
+.concept-key{font-size:0.68rem;text-transform:uppercase;letter-spacing:.08em;color:#4a5568;margin-bottom:4px}
+.concept-val{font-size:0.82rem;color:#c9d1d9;line-height:1.5}
+
+/* hidden */
+.hidden{display:none!important}
+
+/* ── Strategy Discovery ─────────────────────────────────────────────────────── */
+.discover-section{background:#161b22;border:1px solid #21262d;border-radius:14px;padding:20px;margin-bottom:22px}
+.discover-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;user-select:none}
+.discover-title{font-size:0.95rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.discover-badge{background:#a855f722;color:#a855f7;font-size:0.66rem;padding:2px 8px;border-radius:10px;border:1px solid #a855f744;font-weight:700}
+.discover-toggle{color:#4a5568;font-size:0.8rem}
+.discover-body{display:none}
+.discover-body.open{display:block}
+
+.cat-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.cat-btn{padding:4px 12px;border-radius:20px;border:1px solid #30363d;background:transparent;color:#7d8590;
+  font-size:0.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+.cat-btn:hover{border-color:#a855f7;color:#a855f7}
+.cat-btn.active{background:#a855f7;border-color:#a855f7;color:#fff}
+
+.discover-search{display:flex;gap:8px;margin-bottom:14px}
+.discover-search input{flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:8px 10px;font-size:0.82rem}
+.discover-search input:focus{outline:none;border-color:#a855f7}
+.btn-suggest{padding:8px 14px;background:#a855f7;border:none;border-radius:8px;color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-suggest:hover{background:#9333ea}
+.btn-suggest:disabled{background:#3b1a5a;color:#6b21a8;cursor:not-allowed}
+
+.market-ctx-row{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.market-ctx-row label{font-size:0.72rem;color:#4a5568;white-space:nowrap;margin:0}
+.market-ctx-row input{flex:1;background:#0d1117;border:1px solid #21262d;border-radius:8px;color:#7d8590;padding:6px 8px;font-size:0.76rem}
+
+.strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:420px;overflow-y:auto;padding-right:2px}
+.strat-card{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px;cursor:pointer;
+  transition:border-color .15s,transform .1s;position:relative}
+.strat-card:hover{border-color:#a855f7;transform:translateY(-1px)}
+.strat-card.suggested{border-color:#f7931a44;background:#1a120d}
+.strat-card.suggested::before{content:'★ AI Pick';position:absolute;top:-1px;right:8px;
+  background:#f7931a;color:#000;font-size:0.6rem;font-weight:700;padding:1px 6px;border-radius:0 0 6px 6px}
+.strat-name{font-size:0.8rem;font-weight:700;color:#e2e8f4;margin-bottom:4px;line-height:1.3}
+.strat-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.strat-tag{font-size:0.6rem;padding:1px 6px;border-radius:8px;font-weight:600}
+.tag-momentum{background:#1a3a1a;color:#00d68f}
+.tag-mean_reversion{background:#1a1a3a;color:#3b82f6}
+.tag-trend{background:#1a2a3a;color:#60a5fa}
+.tag-value{background:#2b1a0d;color:#f7931a}
+.tag-volatility{background:#2b0d2b;color:#a855f7}
+.tag-seasonal{background:#2b260d;color:#e2cc6d}
+.tag-macro{background:#0d2b2b;color:#22d3ee}
+.tag-arb{background:#1a0d2b;color:#e879f9}
+.strat-edge{font-size:0.72rem;color:#7d8590;line-height:1.45;margin-bottom:8px}
+.strat-stats{display:flex;gap:10px;margin-bottom:8px}
+.strat-stat{font-size:0.65rem;color:#4a5568}
+.strat-stat strong{color:#94a3b8}
+.btn-load{width:100%;padding:5px;background:#1a3a1a;border:1px solid #00d68f44;border-radius:6px;
+  color:#00d68f;font-size:0.72rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-load:hover{background:#0d2b1a}
+
+.src-tab{padding:5px 14px;border:none;border-radius:6px;background:transparent;color:#4a5568;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+.src-tab.active{background:#21262d;color:#e2e8f4}
+.src-tab:hover:not(.active){color:#94a3b8}
+.web-card{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px;margin-bottom:8px}
+.web-card-title{font-size:0.82rem;font-weight:700;color:#e2e8f4;margin-bottom:4px}
+.web-card-src{font-size:0.68rem;color:#4a5568;margin-bottom:6px}
+.web-card-edge{font-size:0.75rem;color:#94a3b8;margin-bottom:8px;line-height:1.4}
+.suggest-result{background:#1a120d;border:1px solid #f7931a33;border-radius:10px;padding:12px;margin-bottom:12px;display:none}
+.suggest-note{font-size:0.78rem;color:#94a3b8;line-height:1.5;margin-bottom:4px}
+.suggest-detail{font-size:0.72rem;color:#4a5568}
+.suggest-why{font-size:0.75rem;color:#e2cc6d;margin:4px 0}
+.suggest-caveat{font-size:0.71rem;color:#7d8590;font-style:italic}
+
+@media(max-width:960px){
+  .grid{grid-template-columns:1fr}
+  .consensus-grid{grid-template-columns:1fr}
+  .concept-grid{grid-template-columns:1fr}
+}
+
+/* ── Save feature ────────────────────────────────────────────────────────── */
+.results-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.btn-save{padding:7px 18px;background:#1a3a2a;border:1px solid #00d68f66;border-radius:8px;
+  color:#00d68f;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-save:hover{background:#0d2b1a;border-color:#00d68f}
+.btn-save:disabled{opacity:.4;cursor:not-allowed}
+
+/* Save dialog overlay */
+.save-overlay{position:fixed;inset:0;background:#000a;z-index:200;display:none;align-items:center;justify-content:center}
+.save-overlay.open{display:flex}
+.save-dialog{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:26px;width:420px;max-width:94vw}
+.save-dialog h3{font-size:1rem;font-weight:700;margin-bottom:18px;color:#fff}
+.save-dialog label{font-size:0.78rem;color:#94a3b8;display:block;margin-bottom:4px;margin-top:12px}
+.save-dialog input,.save-dialog textarea{width:100%;background:#0d1117;border:1px solid #30363d;
+  border-radius:8px;color:#e6edf3;padding:8px 10px;font-size:0.84rem;font-family:inherit}
+.save-dialog textarea{min-height:70px;resize:vertical}
+.save-dialog-btns{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.btn-confirm-save{padding:9px 22px;background:#1D9E75;border:none;border-radius:8px;
+  color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer}
+.btn-confirm-save:hover{background:#179060}
+.btn-cancel-save{padding:9px 16px;background:#21262d;border:none;border-radius:8px;
+  color:#7d8590;font-size:0.85rem;cursor:pointer}
+.btn-cancel-save:hover{background:#30363d;color:#e2e8f4}
+
+/* Saved results panel (inside discover-like section) */
+.saved-section{background:#161b22;border:1px solid #21262d;border-radius:14px;padding:20px;margin-bottom:22px}
+.saved-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;user-select:none}
+.saved-title{font-size:0.95rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.saved-badge{background:#00d68f22;color:#00d68f;font-size:0.66rem;padding:2px 8px;border-radius:10px;border:1px solid #00d68f44;font-weight:700}
+.saved-toggle{color:#4a5568;font-size:0.8rem}
+.saved-body{display:none}
+.saved-body.open{display:block}
+.saved-list{display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto}
+.saved-item{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:12px 14px;
+  display:flex;align-items:flex-start;gap:10px;transition:border-color .15s}
+.saved-item:hover{border-color:#00d68f44}
+.saved-item-info{flex:1;min-width:0;cursor:pointer}
+.saved-item-name{font-size:0.84rem;font-weight:700;color:#e2e8f4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-item-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.saved-item-tag{font-size:0.66rem;padding:1px 7px;border-radius:8px;font-weight:600}
+.tag-trade{background:#0d2b1a;color:#00d68f;border:1px solid #00d68f44}
+.tag-paper{background:#2b1a0d;color:#f7931a;border:1px solid #f7931a44}
+.tag-reject{background:#2b0d0d;color:#f04040;border:1px solid #f0404044}
+.tag-needs{background:#0d0d2b;color:#3b82f6;border:1px solid #3b82f644}
+.saved-item-stats{font-size:0.7rem;color:#4a5568;margin-top:3px}
+.saved-item-date{font-size:0.65rem;color:#30363d;margin-top:2px}
+.btn-del-saved{padding:4px 8px;background:transparent;border:1px solid #21262d;border-radius:6px;
+  color:#4a5568;font-size:0.7rem;cursor:pointer;flex-shrink:0;transition:all .15s;margin-top:2px}
+.btn-del-saved:hover{border-color:#f04040;color:#f04040}
+.saved-empty{text-align:center;color:#4a5568;font-size:0.8rem;padding:18px 0}
+.save-toast{position:fixed;bottom:24px;right:24px;background:#1D9E75;color:#fff;
+  padding:10px 18px;border-radius:8px;font-size:0.84rem;font-weight:600;z-index:300;
+  display:none;animation:slideUp .2s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">Alpha<span>Terminal</span></a>
+  <a href="/watchlist">Watchlist</a>
+  <a href="/alerts">Alerts</a>
+  <a href="/fire">FIRE</a>
+  <a href="/crypto">Crypto</a>
+  <a href="/strategy-lab" class="active">Strategy Lab</a>
+  <span class="nav-sep"></span>
+</nav>
+
+<div class="wrap">
+  <div class="page-title">AI Strategy Lab</div>
+  <div class="page-sub">Hedge-fund research team — validate existing strategies or generate new ones from ideas</div>
+
+  <!-- ── Saved Results ─────────────────────────────────────────────────────── -->
+  <div class="saved-section">
+    <div class="saved-header" onclick="toggleSaved()">
+      <div class="saved-title">
+        💾 Saved Results
+        <span class="saved-badge" id="savedBadge">0 SAVED</span>
+      </div>
+      <span class="saved-toggle" id="savedToggleIcon">▼ expand</span>
+    </div>
+    <div class="saved-body" id="savedBody">
+      <div class="saved-list" id="savedList">
+        <div class="saved-empty">No saved results yet — run a strategy and click "Save Result"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save dialog -->
+  <div class="save-overlay" id="saveOverlay">
+    <div class="save-dialog">
+      <h3>💾 Save Result</h3>
+      <label>Name</label>
+      <input type="text" id="saveName" placeholder="e.g. RSI Pullback v2 — SPY 2022-2025" maxlength="120">
+      <label>Notes (optional)</label>
+      <textarea id="saveNotes" placeholder="e.g. Best version: v3, works well in bull regimes, try live paper next week"></textarea>
+      <div class="save-dialog-btns">
+        <button class="btn-cancel-save" onclick="closeSaveDialog()">Cancel</button>
+        <button class="btn-confirm-save" onclick="confirmSave()">Save to Database</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="save-toast" id="saveToast"></div>
+
+  <!-- Strategy Discovery -->
+  <div class="discover-section">
+    <div class="discover-header" onclick="toggleDiscover()">
+      <div class="discover-title">
+        🔍 Strategy Discovery
+        <span class="discover-badge">25 STRATEGIES</span>
+      </div>
+      <span class="discover-toggle" id="discoverToggleIcon">▼ expand</span>
+    </div>
+    <div class="discover-body" id="discoverBody">
+      <!-- Search tabs -->
+      <div style="display:flex;gap:0;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:3px;width:fit-content;margin-bottom:12px">
+        <button id="srcTabLib" class="src-tab active" onclick="switchSrcTab('lib')">📚 Library</button>
+        <button id="srcTabWeb" class="src-tab" onclick="switchSrcTab('web')">🌐 Web Search</button>
+        <button id="srcTabAI"  class="src-tab" onclick="switchSrcTab('ai')">🤖 AI Suggest</button>
+      </div>
+
+      <!-- Library panel -->
+      <div id="srcPanelLib">
+        <div class="market-ctx-row" style="margin-bottom:8px">
+          <input type="text" id="libSearch" placeholder="Filter library strategies..." oninput="filterLibSearch(this.value)" style="background:#0d1117;border:1px solid #21262d;border-radius:8px;color:#e6edf3;padding:7px 10px;font-size:0.8rem;width:100%">
+        </div>
+      </div>
+
+      <!-- Web search panel -->
+      <div id="srcPanelWeb" style="display:none">
+        <div style="font-size:0.72rem;color:#4a5568;margin-bottom:8px">Search Reddit r/algotrading, r/quantfinance + web — AI extracts actionable strategies</div>
+        <div class="discover-search">
+          <input type="text" id="webQuery" placeholder="e.g. RSI mean reversion backtest, MACD momentum strategy reddit..." onkeydown="if(event.key==='Enter')webSearch()">
+          <button class="btn-suggest" style="background:#3b82f6" id="webBtn" onclick="webSearch()">Search</button>
+        </div>
+        <div id="webResults"></div>
+      </div>
+
+      <!-- AI suggest panel -->
+      <div id="srcPanelAI" style="display:none">
+        <div class="market-ctx-row">
+          <label>Market context:</label>
+          <input type="text" id="marketCtx" placeholder="e.g. SPY bull trend, VIX 15, tech leading — optional">
+        </div>
+        <div class="discover-search">
+          <input type="text" id="discoverQuery" placeholder="e.g. momentum strategy for tech stocks, low risk, daily timeframe..." onkeydown="if(event.key==='Enter')aiSuggest()">
+          <button class="btn-suggest" id="suggestBtn" onclick="aiSuggest()">AI Suggest</button>
+        </div>
+      </div>
+
+      <!-- AI suggest results (shown under all panels) -->
+      <div class="suggest-result" id="suggestResult"></div>
+
+      <!-- Category filters -->
+      <div class="cat-filters" id="catFilterRow">
+        <button class="cat-btn active" onclick="filterCat('all',this)">All</button>
+        <button class="cat-btn" onclick="filterCat('momentum',this)">Momentum</button>
+        <button class="cat-btn" onclick="filterCat('mean_reversion',this)">Mean Reversion</button>
+        <button class="cat-btn" onclick="filterCat('trend',this)">Trend Following</button>
+        <button class="cat-btn" onclick="filterCat('volatility',this)">Volatility</button>
+        <button class="cat-btn" onclick="filterCat('value',this)">Value/Factor</button>
+        <button class="cat-btn" onclick="filterCat('macro',this)">Macro</button>
+        <button class="cat-btn" onclick="filterCat('seasonal',this)">Seasonal</button>
+        <button class="cat-btn" onclick="filterCat('arb',this)">Arb</button>
+      </div>
+      <!-- Strategy cards -->
+      <div class="strat-grid" id="stratGrid">
+        <div style="color:#4a5568;font-size:0.8rem;padding:20px;text-align:center;grid-column:1/-1">Loading strategies…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeValidate" onclick="setMode('validate')">Validate Strategy</button>
+    <button class="mode-btn" id="modeGenerate" onclick="setMode('generate')">Generate from Idea</button>
+  </div>
+
+  <div class="grid">
+    <!-- ── Left panel ───────────────────────────────── -->
+    <div class="lp">
+
+      <!-- Validate mode inputs -->
+      <div id="validateInputs">
+        <div class="section-title">Strategy Code</div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+          <div style="font-size:1.6rem">📂</div>
+          <p>Drop .py file here or click to browse</p>
+          <input type="file" id="fileIn" accept=".py,.txt">
+        </div>
+        <label>Or paste code directly</label>
+        <textarea class="ta-strategy" id="codeArea" placeholder="def generate_signals(df):
+    # df: Open High Low Close Volume
+    # return pd.Series of 1 (buy) / -1 (sell) / 0 (hold)
+    ..."></textarea>
+      </div>
+
+      <!-- Generate mode inputs -->
+      <div id="generateInputs" class="hidden">
+        <div class="section-title">Trading Idea or Theme</div>
+        <label>Describe your strategy idea</label>
+        <textarea class="ta-idea" id="ideaArea" placeholder="Examples:
+• Momentum breakout strategy for high relative volume stocks
+• Mean reversion using RSI oversold on S&P 500 stocks
+• Swing trading with earnings momentum + technical breakout
+• Trend following daily strategy for AI/tech sector ETFs"></textarea>
+      </div>
+
+      <!-- Config -->
+      <div class="section-title">Backtest Configuration</div>
+      <label>Symbols (comma-separated)</label>
+      <input type="text" id="cfgSymbols" value="SPY,QQQ,AAPL">
+
+      <div class="cfg-grid">
+        <div><label>Start Date</label><input type="date" id="cfgStart" value="2022-01-01"></div>
+        <div><label>End Date</label><input type="date" id="cfgEnd"></div>
+        <div><label>Capital ($)</label><input type="number" id="cfgCapital" value="100000" min="1000"></div>
+        <div><label>Interval</label>
+          <select id="cfgInterval">
+            <option value="1d" selected>Daily (1d)</option>
+            <option value="1h">Hourly (1h)</option>
+            <option value="30m">30-minute</option>
+            <option value="15m">15-minute</option>
+            <option value="5m">5-minute</option>
+            <option value="1wk">Weekly</option>
+          </select>
+        </div>
+        <div><label>Stop-Loss % (blank=none)</label><input type="number" id="cfgStop" placeholder="e.g. 5" min="0" max="50"></div>
+        <div><label>Slippage</label><input type="number" id="cfgSlip" value="0.0005" step="0.0001" min="0"></div>
+        <div><label>Claude Model (code gen)</label>
+          <select id="cfgClaudeModel">
+            <option value="claude-haiku-4-5-20251001" selected>Haiku 4.5 — fast &amp; cheap</option>
+            <option value="claude-sonnet-4-6">Sonnet 4.6 — smarter code</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn-run" id="runBtn" onclick="startJob()">Run Strategy Lab</button>
+
+      <!-- Progress -->
+      <div class="prog-wrap" id="progWrap">
+        <div class="prog-bg"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="prog-step" id="progStep">Initialising...</div>
+        <div class="log-box" id="logBox"></div>
+        <!-- Live token meter -->
+        <div id="tokenMeter" style="margin-top:10px;display:none">
+          <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a5568;margin-bottom:6px">Token Usage</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="background:#0d1117;border:1px solid #21262d;border-radius:7px;padding:7px 10px">
+              <div style="font-size:0.64rem;color:#4a5568;margin-bottom:3px">DEEPSEEK (reasoning)</div>
+              <div id="tokGrok" style="font-size:0.82rem;color:#3b82f6;font-weight:600">0 tokens</div>
+            </div>
+            <div style="background:#0d1117;border:1px solid #21262d;border-radius:7px;padding:7px 10px">
+              <div id="tokHaikuLabel" style="font-size:0.64rem;color:#4a5568;margin-bottom:3px">HAIKU (code)</div>
+              <div id="tokHaiku" style="font-size:0.82rem;color:#1D9E75;font-weight:600">0 tokens</div>
+            </div>
+          </div>
+          <div id="tokCost" style="margin-top:6px;font-size:0.76rem;color:#7d8590;text-align:right"></div>
+          <div id="tokWarn" style="display:none;margin-top:5px;background:#2b1a0d;border:1px solid #f7931a44;border-radius:6px;padding:5px 10px;font-size:0.72rem;color:#f7931a">
+            ⚠ Cost threshold exceeded — consider stopping
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right panel / Results ─────────────────────── -->
+    <div class="rp" id="resultsPanel">
+      <div class="results-toolbar">
+        <div class="tabs" style="margin-bottom:0;border-bottom:none;flex:1">
+          <button class="tab-btn active" onclick="tab('overview')">Overview</button>
+          <button class="tab-btn" onclick="tab('code')">Strategy Code</button>
+          <button class="tab-btn" onclick="tab('issues')">Issues</button>
+          <button class="tab-btn" onclick="tab('metrics')">Metrics</button>
+          <button class="tab-btn" onclick="tab('debate')">Agent Debate</button>
+          <button class="tab-btn" onclick="tab('evolution')">Evolution</button>
+          <button class="tab-btn" onclick="tab('comparison')">Comparison</button>
+          <button class="tab-btn" onclick="tab('report')">Final Report</button>
+        </div>
+        <button class="btn-save" id="btnSaveResult" onclick="openSaveDialog()" title="Save this result to database for later review">
+          💾 Save Result
+        </button>
+      </div>
+      <div style="border-bottom:1px solid #21262d;margin-bottom:18px"></div>
+
+      <!-- Overview -->
+      <div class="tab-pane active" id="tab-overview">
+        <div id="verdictBanner"></div>
+        <div id="conceptPanel"></div><!-- generation mode only -->
+        <div id="overviewStats" class="stat-grid"></div>
+        <div class="chart-box">
+          <div class="chart-lbl">Equity Curve — v1</div>
+          <canvas id="eqChart"></canvas>
+        </div>
+        <div id="regimePills" class="pill-row"></div>
+        <div id="regimeBreakdown"></div>
+      </div>
+
+      <!-- Code -->
+      <div class="tab-pane" id="tab-code">
+        <div id="codeHeader" style="margin-bottom:12px;font-size:0.82rem;color:#7d8590"></div>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode()" style="right:80px">Copy</button>
+          <button class="copy-btn" onclick="downloadCode()" style="right:10px">Download</button>
+          <pre id="codePre"></pre>
+        </div>
+        <div id="bestCodeNote" style="display:none;margin-top:10px;font-size:0.78rem;color:#7d8590"></div>
+      </div>
+
+      <!-- Issues -->
+      <div class="tab-pane" id="tab-issues">
+        <div id="issuesSummary" style="margin-bottom:14px"></div>
+        <div id="issuesList"></div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="tab-pane" id="tab-metrics">
+        <div id="metricsGrid" class="stat-grid"></div>
+        <div class="chart-box" style="margin-top:14px">
+          <div class="chart-lbl">All Versions — Equity Curves</div>
+          <canvas id="allVerChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Debate -->
+      <div class="tab-pane" id="tab-debate">
+        <div id="consensusBox"></div>
+        <div class="agent-list" id="agentList"></div>
+      </div>
+
+      <!-- Evolution -->
+      <div class="tab-pane" id="tab-evolution">
+        <div id="evoList"></div>
+      </div>
+
+      <!-- Comparison -->
+      <div class="tab-pane" id="tab-comparison">
+        <div style="overflow-x:auto"><table class="cmp-table" id="cmpTable"></table></div>
+      </div>
+
+      <!-- Report -->
+      <div class="tab-pane" id="tab-report">
+        <div class="report-box" id="reportBox"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Global state ─────────────────────────────────────────────────────────────
+let _mode = 'validate';
+let _allStrategies = [];
+let _activeCat = 'all';
+let _suggestedIds = new Set();
+let _suggestMeta = {};
+function setMode(m) {
+  _mode = m;
+  document.getElementById('modeValidate').classList.toggle('active', m==='validate');
+  document.getElementById('modeGenerate').classList.toggle('active', m==='generate');
+  document.getElementById('validateInputs').classList.toggle('hidden', m!=='validate');
+  document.getElementById('generateInputs').classList.toggle('hidden', m!=='generate');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+const TABS = ['overview','code','issues','metrics','debate','evolution','comparison','report'];
+function tab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', TABS[i]===name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id==='tab-'+name));
+}
+
+// ── File drop ─────────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('drag-over');readFile(e.dataTransfer.files[0])});
+document.getElementById('fileIn').addEventListener('change', e=>{if(e.target.files[0])readFile(e.target.files[0])});
+function readFile(f){const r=new FileReader();r.onload=e=>{document.getElementById('codeArea').value=e.target.result};r.readAsText(f)}
+
+// ── Defaults ──────────────────────────────────────────────────────────────────
+document.getElementById('cfgEnd').value = new Date().toISOString().split('T')[0];
+
+// Auto-open discovery and pre-load library
+toggleDiscover();
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+let _eqChart=null, _allVerChart=null;
+const COLORS=['#1D9E75','#3b82f6','#f7931a','#e05a2e','#a855f7'];
+
+function mkLineChart(canvasId, datasets, labels, old) {
+  if(old) old.destroy();
+  return new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type:'line', data:{labels, datasets},
+    options:{
+      responsive:true, animation:false,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}, tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{ticks:{color:'#4a5568',maxTicksLimit:8},grid:{color:'#21262d'}},
+        y:{ticks:{color:'#4a5568',callback:v=>'$'+v.toLocaleString()},grid:{color:'#21262d'}},
+      }
+    }
+  });
+}
+
+// ── Job lifecycle ─────────────────────────────────────────────────────────────
+let _jid=null, _pollT=null;
+
+function startJob() {
+  const payload = {mode: _mode, config: buildConfig()};
+  if(_mode==='validate') {
+    payload.code = document.getElementById('codeArea').value.trim();
+    if(!payload.code){alert('Paste or upload strategy code.');return}
+  } else {
+    payload.idea = document.getElementById('ideaArea').value.trim();
+    if(!payload.idea){alert('Enter a trading idea or theme.');return}
+  }
+
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('runBtn').textContent='Running…';
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('resultsPanel').style.display='none';
+  document.getElementById('logBox').textContent='';
+
+  fetch('/api/strategy-lab/run', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(r=>r.json()).then(d=>{_jid=d.job_id; poll()})
+    .catch(e=>{alert('Start failed: '+e); resetBtn()});
+}
+
+function buildConfig() {
+  const syms = document.getElementById('cfgSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const claudeModel = document.getElementById('cfgClaudeModel').value;
+  // Update token meter label to reflect chosen model
+  const modelLabel = claudeModel.includes('sonnet') ? 'SONNET (code)' : 'HAIKU (code)';
+  document.getElementById('tokHaikuLabel').textContent = modelLabel;
+  return {
+    symbols:    syms,
+    start:        document.getElementById('cfgStart').value,
+    end:          document.getElementById('cfgEnd').value,
+    capital:      parseFloat(document.getElementById('cfgCapital').value)||100000,
+    interval:     document.getElementById('cfgInterval').value,
+    stop_loss:    document.getElementById('cfgStop').value||null,
+    slippage:     parseFloat(document.getElementById('cfgSlip').value)||0.0005,
+    claude_model: claudeModel,
+    _user_dates:  true,
+  };
+}
+
+function poll() {
+  fetch('/api/strategy-lab/status/'+_jid).then(r=>r.json()).then(d=>{
+    document.getElementById('progFill').style.width=(d.progress||0)+'%';
+    document.getElementById('progStep').textContent=d.step||'';
+    const lb=document.getElementById('logBox');
+    lb.textContent=(d.log||[]).join('\n'); lb.scrollTop=lb.scrollHeight;
+    // Update live token meter
+    if(d.tokens) updateTokenMeter(d.tokens);
+    if(d.status==='done'){clearTimeout(_pollT);fetchResult()}
+    else if(d.status==='error'){clearTimeout(_pollT);alert('Job failed: '+d.error);resetBtn()}
+    else{_pollT=setTimeout(poll,2000)}
+  });
+}
+
+function updateTokenMeter(toks) {
+  document.getElementById('tokenMeter').style.display='block';
+  const grokIn    = toks.grok?.in||0,   grokOut    = toks.grok?.out||0;
+  // Sonnet tokens stored under 'sonnet' key, Haiku under 'haiku'
+  const isSonnet  = !!(toks.sonnet?.in || toks.sonnet?.out);
+  const claudeKey = isSonnet ? 'sonnet' : 'haiku';
+  const claudeIn  = toks[claudeKey]?.in||0, claudeOut = toks[claudeKey]?.out||0;
+
+  if(isSonnet) {
+    document.getElementById('tokHaikuLabel').textContent = 'SONNET (code)';
+  }
+
+  document.getElementById('tokGrok').textContent  = fmtTok(grokIn+grokOut) + ' — ↑'+fmtTok(grokIn)+' ↓'+fmtTok(grokOut);
+  document.getElementById('tokHaiku').textContent = fmtTok(claudeIn+claudeOut) + ' — ↑'+fmtTok(claudeIn)+' ↓'+fmtTok(claudeOut);
+
+  // Estimate cost
+  const grokCost   = grokIn/1e6*0.27 + grokOut/1e6*1.10;
+  const claudeCost = isSonnet
+    ? claudeIn/1e6*3.00 + claudeOut/1e6*15.00
+    : claudeIn/1e6*1.00 + claudeOut/1e6*5.00;
+  const total = grokCost + claudeCost;
+  const claudeName = isSonnet ? 'Sonnet' : 'Haiku';
+  document.getElementById('tokCost').textContent =
+    `Est. cost: $${total.toFixed(4)} (DeepSeek $${grokCost.toFixed(4)} + ${claudeName} $${claudeCost.toFixed(4)})`;
+  document.getElementById('tokWarn').style.display = total>=0.50 ? 'block' : 'none';
+}
+
+function fmtTok(n){ return n>=1000 ? (n/1000).toFixed(1)+'K' : String(n) }
+
+function fetchResult() {
+  fetch('/api/strategy-lab/result/'+_jid)
+    .then(r => {
+      if(!r.ok) throw new Error(`Server error ${r.status}: ${r.statusText}`);
+      return r.json();
+    })
+    .then(data => { render(data); resetBtn(); })
+    .catch(e => {
+      document.getElementById('progStep').textContent = 'Result load failed: '+e.message;
+      console.error('fetchResult error:', e);
+      resetBtn();
+    });
+}
+
+function resetBtn() {
+  const b=document.getElementById('runBtn');
+  b.disabled=false; b.textContent='Run Strategy Lab';
+}
+
+// ── Render results ────────────────────────────────────────────────────────────
+function safeRun(fn, label) {
+  try { fn(); } catch(e) { console.error('render error in '+label+':', e); }
+}
+
+function render(data) {
+  _currentResult = data;
+  // Pre-fill save dialog name from strategy name
+  const _sname = data.parsed?.strategy_name || data.concept?.strategy_name || '';
+  if(_sname) document.getElementById('saveName').value = _sname;
+
+  document.getElementById('resultsPanel').style.display='block';
+  const m    = data.v1?.metrics || {};
+  const cfg  = data.config || {};
+  const best = data.best_version || 1;
+  const consensus = data.consensus || {};
+  const evolution = data.evolution || [];
+
+  safeRun(()=>renderVerdict(consensus), 'verdict');
+  if(data.mode==='generate') safeRun(()=>renderConcept(data.concept||{}), 'concept');
+  safeRun(()=>renderOverviewStats(m, cfg), 'overviewStats');
+  safeRun(()=>renderEquityChart(data.v1?.equity_points||[]), 'equityChart');
+  safeRun(()=>renderRegimePills(data.regimes||{}, cfg), 'regimePills');
+  safeRun(()=>renderRegimeBreakdown(data.v1?.regime_breakdown||{}), 'regimeBreakdown');
+  if(data.token_usage) safeRun(()=>updateTokenMeter(data.token_usage), 'tokenMeter');
+  safeRun(()=>renderCode(data.v1?.signal_code||'', data.mode, data.concept, evolution, best), 'code');
+  safeRun(()=>renderIssues(data.issues||{}), 'issues');
+  safeRun(()=>renderMetrics(m), 'metrics');
+  safeRun(()=>renderAllVerChart(data, evolution), 'allVerChart');
+  safeRun(()=>renderDebate(data.agents||[], consensus), 'debate');
+  safeRun(()=>renderEvolution(evolution, m, best), 'evolution');
+  safeRun(()=>renderComparison(m, evolution, best), 'comparison');
+  safeRun(()=>{document.getElementById('reportBox').textContent = data.final_report||'No report.';}, 'report');
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+function renderVerdict(c) {
+  const v=c.verdict||'';
+  const cls = v.includes('LIVE')?'trade':v.includes('PAPER')?'paper':v.includes('REJECT')?'reject':'needs';
+  const icon = v.includes('LIVE')?'✅':v.includes('PAPER')?'📋':v.includes('REJECT')?'❌':'🔧';
+  document.getElementById('verdictBanner').innerHTML =
+    `<div class="verdict ${cls}">${icon} ${v||'NEEDS WORK'} — Confidence: ${c.confidence_score||'—'}/10</div>`;
+}
+
+function renderConcept(c) {
+  if(!c||!c.strategy_name){document.getElementById('conceptPanel').innerHTML='';return}
+  document.getElementById('conceptPanel').innerHTML=`
+    <div class="concept-box">
+      <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:6px">${esc(c.strategy_name)}</div>
+      <div style="font-size:0.83rem;color:#94a3b8;line-height:1.6">${esc(c.rationale||'')}</div>
+      <div class="concept-grid">
+        <div class="concept-item"><div class="concept-key">Expected Edge</div><div class="concept-val">${esc(c.expected_edge||'—')}</div></div>
+        <div class="concept-item"><div class="concept-key">Market Conditions</div><div class="concept-val">${esc(c.market_conditions||'—')}</div></div>
+        <div class="concept-item"><div class="concept-key">Indicators</div><div class="concept-val">${(c.indicators||[]).join(', ')||'—'}</div></div>
+        <div class="concept-item"><div class="concept-key">Weaknesses</div><div class="concept-val">${(c.weaknesses||[]).slice(0,2).join('; ')||'—'}</div></div>
+      </div>
+    </div>`;
+}
+
+function renderOverviewStats(m, cfg) {
+  const cards=[
+    {l:'Total Return',v:pct(m.total_return_pct),c:colPct(m.total_return_pct)},
+    {l:'CAGR',v:pct(m.cagr_pct),c:colPct(m.cagr_pct)},
+    {l:'Sharpe',v:fmt(m.sharpe,3),c:m.sharpe>=1?'pos':m.sharpe>=0?'neu':'neg'},
+    {l:'Sortino',v:fmt(m.sortino,3),c:m.sortino>=1?'pos':m.sortino>=0?'neu':'neg'},
+    {l:'Max Drawdown',v:pct(m.max_drawdown_pct),c:'neg'},
+    {l:'Win Rate',v:pct(m.win_rate_pct),c:colPct(m.win_rate_pct-50)},
+    {l:'Profit Factor',v:fmt(m.profit_factor,3),c:m.profit_factor>=1.5?'pos':m.profit_factor>=1?'neu':'neg'},
+    {l:'Total Trades',v:m.total_trades||0,c:'neu'},
+  ];
+  document.getElementById('overviewStats').innerHTML=
+    cards.map(s=>`<div class="stat-card"><div class="stat-lbl">${s.l}</div><div class="stat-val ${s.c}">${s.v}</div></div>`).join('');
+}
+
+function renderEquityChart(pts) {
+  _eqChart=mkLineChart('eqChart',[{
+    label:'v1',data:pts.map(p=>p.value),borderColor:COLORS[0],
+    backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,pointRadius:0,fill:true,tension:0.3
+  }], pts.map(p=>p.date), _eqChart);
+}
+
+function renderRegimePills(r, cfg) {
+  document.getElementById('regimePills').innerHTML=[
+    `<div class="pill">Interval: <strong>${cfg.interval_label||cfg.interval||'—'}</strong></div>`,
+    `<div class="pill">Period: <strong>${cfg.start||''} → ${cfg.end||''}</strong></div>`,
+    `<div class="pill">Bull: <strong>${r.bull_pct||0}%</strong></div>`,
+    `<div class="pill">Bear: <strong>${r.bear_pct||0}%</strong></div>`,
+    `<div class="pill">SPY: <strong>${r.spy_total_return||0}%</strong></div>`,
+    `<div class="pill">Ann.Vol: <strong>${r.annualized_vol||0}%</strong></div>`,
+  ].join('');
+}
+
+function renderRegimeBreakdown(rb) {
+  if(!rb||!Object.keys(rb).length){document.getElementById('regimeBreakdown').innerHTML='';return}
+  const rows=Object.entries(rb).map(([regime,d])=>
+    `<tr>
+      <td style="color:#e2e8f4;font-weight:600">${esc(regime)}</td>
+      <td style="color:#94a3b8">${d.trades}</td>
+      <td class="${d.win_rate>=50?'pos':'neg'}">${d.win_rate}%</td>
+      <td class="${d.avg_pnl>=0?'pos':'neg'}">$${d.avg_pnl}</td>
+    </tr>`).join('');
+  document.getElementById('regimeBreakdown').innerHTML=`
+    <div class="chart-box">
+      <div class="chart-lbl">Performance by Market Regime</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+        <thead><tr style="color:#4a5568;font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em">
+          <th style="padding:8px 10px;text-align:left">Regime</th>
+          <th style="padding:8px 10px;text-align:left">Trades</th>
+          <th style="padding:8px 10px;text-align:left">Win Rate</th>
+          <th style="padding:8px 10px;text-align:left">Avg PnL</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Code tab ──────────────────────────────────────────────────────────────────
+let _bestCode = '';
+let _strategyName = 'strategy';
+
+function renderCode(code, mode, concept, evolution, best) {
+  _strategyName = (concept?.strategy_name || 'strategy').replace(/\s+/g,'_').toLowerCase();
+  // Find best evolved code if a later version is best
+  let displayCode = code;
+  let note = '';
+  if(evolution && evolution.length && best && best > 1) {
+    const bestEvo = evolution.find(e => e.version === best);
+    if(bestEvo?.signal_code) {
+      displayCode = bestEvo.signal_code;
+      note = `Showing v${best} (best version by Sharpe). v1 code was replaced by evolution.`;
+    }
+  }
+  _bestCode = displayCode;
+  document.getElementById('codeHeader').textContent =
+    mode==='generate'
+      ? `Generated for: ${concept?.strategy_name||'Strategy'}`
+      : 'Extracted signal generator — ready to backtest';
+  document.getElementById('codePre').textContent = displayCode||'(no code extracted)';
+  const noteEl = document.getElementById('bestCodeNote');
+  if(note) { noteEl.textContent = '★ '+note; noteEl.style.display='block'; }
+  else noteEl.style.display='none';
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(document.getElementById('codePre').textContent)
+    .then(()=>{const b=document.querySelectorAll('.copy-btn')[0];b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',2000)});
+}
+
+function downloadCode() {
+  const blob = new Blob([_bestCode], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = _strategyName + '_strategy.py';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── Issues tab ────────────────────────────────────────────────────────────────
+function renderIssues(issues) {
+  const list  = issues.issues||[];
+  const qual  = issues.overall_quality||'Unknown';
+  const imp   = issues.implementation_ready;
+  const qcol  = qual==='Excellent'?'pos':qual==='Good'?'neu':qual==='Fair'?'warn':'neg';
+  document.getElementById('issuesSummary').innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-lbl">Code Quality</div><div class="stat-val ${qcol}">${qual}</div></div>
+      <div class="stat-card"><div class="stat-lbl">Issues Found</div><div class="stat-val ${list.length>3?'neg':list.length>0?'warn':'pos'}">${list.length}</div></div>
+      <div class="stat-card"><div class="stat-lbl">Prod Ready</div><div class="stat-val ${imp?'pos':'neg'}">${imp?'Yes':'No'}</div></div>
+      <div class="stat-card"><div class="stat-lbl">Surv. Bias Risk</div><div class="stat-val ${issues.survivorship_bias_risk==='High'?'neg':'neu'}">${issues.survivorship_bias_risk||'—'}</div></div>
+    </div>
+    <p style="font-size:0.83rem;color:#7d8590;margin-top:4px">${esc(issues.summary||'')}</p>`;
+  document.getElementById('issuesList').innerHTML=list.map(iss=>`
+    <div class="issue-card ${(iss.severity||'').toLowerCase()}">
+      <div class="issue-header">
+        <span class="issue-type">${esc(iss.type||'')}</span>
+        <span class="sev-badge sev-${iss.severity||'Low'}">${esc(iss.severity||'')}</span>
+      </div>
+      <div class="issue-desc">${esc(iss.description||'')}</div>
+      ${iss.location?`<div class="issue-fix" style="color:#7d8590;margin-bottom:3px">📍 ${esc(iss.location)}</div>`:''}
+      ${iss.fix?`<div class="issue-fix">💡 ${esc(iss.fix)}</div>`:''}
+    </div>`).join('');
+}
+
+// ── Metrics tab ───────────────────────────────────────────────────────────────
+function renderMetrics(m) {
+  const cards=[
+    {l:'Total Return',v:pct(m.total_return_pct),c:colPct(m.total_return_pct)},
+    {l:'CAGR',v:pct(m.cagr_pct),c:colPct(m.cagr_pct)},
+    {l:'Sharpe',v:fmt(m.sharpe,3),c:m.sharpe>=1?'pos':m.sharpe>=0?'neu':'neg'},
+    {l:'Sortino',v:fmt(m.sortino,3),c:m.sortino>=1?'pos':m.sortino>=0?'neu':'neg'},
+    {l:'Max Drawdown',v:pct(m.max_drawdown_pct),c:'neg'},
+    {l:'Calmar',v:fmt(m.calmar,3),c:m.calmar>=1?'pos':'neu'},
+    {l:'Win Rate',v:pct(m.win_rate_pct),c:colPct(m.win_rate_pct-50)},
+    {l:'Profit Factor',v:fmt(m.profit_factor,3),c:m.profit_factor>=1.5?'pos':m.profit_factor>=1?'neu':'neg'},
+    {l:'Expectancy',v:'$'+fmt(m.expectancy_usd,2),c:colPct(m.expectancy_usd)},
+    {l:'Total Trades',v:m.total_trades||0,c:'neu'},
+    {l:'Avg Win',v:'$'+fmt(m.avg_win_usd,2),c:'pos'},
+    {l:'Avg Loss',v:'$'+fmt(m.avg_loss_usd,2),c:'neg'},
+    {l:'Years Tested',v:fmt(m.years,1),c:'neu'},
+    {l:'Final Equity',v:'$'+(m.final_equity||0).toLocaleString(),c:colPct(m.total_return_pct)},
+  ];
+  document.getElementById('metricsGrid').innerHTML=
+    cards.map(s=>`<div class="stat-card"><div class="stat-lbl">${s.l}</div><div class="stat-val ${s.c}">${s.v}</div></div>`).join('');
+}
+
+function renderAllVerChart(data, evolution) {
+  const v1pts = data.v1?.equity_points||[];
+  const datasets=[{
+    label:'v1',data:v1pts.map(p=>p.value),borderColor:COLORS[0],borderWidth:2,pointRadius:0,fill:false,tension:0.3
+  }];
+  evolution.forEach((e,i)=>{
+    datasets.push({
+      label:`v${e.version}`,data:(e.equity_points||[]).map(p=>p.value),
+      borderColor:COLORS[(i+1)%COLORS.length],borderWidth:2,pointRadius:0,fill:false,tension:0.3
+    });
+  });
+  _allVerChart=mkLineChart('allVerChart',datasets,v1pts.map(p=>p.date),_allVerChart);
+}
+
+// ── Debate tab ────────────────────────────────────────────────────────────────
+function renderDebate(agents, c) {
+  const verdCls=c.verdict?.includes('LIVE')?'trade':c.verdict?.includes('PAPER')?'paper':c.verdict?.includes('REJECT')?'reject':'needs';
+  const rs = c.retail_score || {};
+  const retailRow = (rs.automation_ease||rs.min_capital||rs.data_cost||rs.time_commitment) ? `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #21262d">
+      <div style="font-size:0.68rem;color:#4a5568;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Retail Viability</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        ${rs.automation_ease ? `<div class="strat-stat"><strong>Automation</strong> ${esc(rs.automation_ease)}/10</div>` : ''}
+        ${rs.min_capital     ? `<div class="strat-stat"><strong>Min Capital</strong> ${esc(rs.min_capital)}</div>` : ''}
+        ${rs.data_cost       ? `<div class="strat-stat"><strong>Data Cost</strong> ${esc(rs.data_cost)}</div>` : ''}
+        ${rs.time_commitment ? `<div class="strat-stat"><strong>Time</strong> ${esc(rs.time_commitment)}</div>` : ''}
+      </div>
+    </div>` : '';
+  document.getElementById('consensusBox').innerHTML=`
+    <div class="consensus-box">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+        <div>
+          <div class="consensus-label">Confidence Score</div>
+          <div class="consensus-score">${c.confidence_score||'—'}<span style="font-size:1rem;color:#4a5568">/10</span></div>
+        </div>
+        <div>
+          <div class="consensus-label">Team Verdict</div>
+          <div style="margin-top:4px"><span class="verdict ${verdCls}" style="display:inline-flex;padding:6px 14px">${c.verdict||'NEEDS WORK'}</span></div>
+        </div>
+      </div>
+      <div style="font-size:0.85rem;color:#c9d1d9;line-height:1.7;margin-bottom:12px">${esc(c.consensus||'')}</div>
+      <div class="consensus-grid">
+        <div class="cg-item"><div class="cg-title">Key Strengths</div><div class="cg-body">${(c.key_strengths||[]).map(s=>'• '+esc(s)).join('<br>')}</div></div>
+        <div class="cg-item"><div class="cg-title">Key Concerns</div><div class="cg-body">${(c.key_concerns||[]).map(s=>'• '+esc(s)).join('<br>')}</div></div>
+        <div class="cg-item"><div class="cg-title">Trade When</div><div class="cg-body">${esc(c.best_market_conditions||'—')}</div></div>
+        <div class="cg-item"><div class="cg-title">Avoid When</div><div class="cg-body">${esc(c.avoid_conditions||'—')}</div></div>
+        <div class="cg-item" style="grid-column:1/-1"><div class="cg-title">Next Steps</div><div class="cg-body">${(c.next_steps||[]).map(s=>'• '+esc(s)).join('<br>')}</div></div>
+      </div>
+      ${retailRow}
+    </div>`;
+  document.getElementById('agentList').innerHTML=agents.map(a=>`
+    <div class="agent-card">
+      <div class="agent-header">${a.emoji||'🤖'} ${esc(a.name)}</div>
+      <div class="agent-body">${esc(a.analysis)}</div>
+    </div>`).join('');
+}
+
+// ── Evolution tab ─────────────────────────────────────────────────────────────
+function renderEvolution(evolution, v1m, best) {
+  if(!evolution.length){
+    document.getElementById('evoList').innerHTML='<p style="color:#7d8590;font-size:0.85rem">No evolution ran.</p>';
+    return;
+  }
+  document.getElementById('evoList').innerHTML=evolution.map(e=>{
+    const em=e.metrics||{};
+    const dc=em.cagr_pct-v1m.cagr_pct, ds=em.sharpe-v1m.sharpe, dd=em.max_drawdown_pct-v1m.max_drawdown_pct;
+    const isBest=(e.version===best);
+    return `<div class="evo-card">
+      <div class="evo-top">
+        <span class="ver-badge${isBest?' best':''}">${isBest?'★ ':''} v${e.version}.0</span>
+        <span class="improve-tag ${e.improved?'pos':'neg'}">${e.improved?'▲ Improved':'▼ No improvement'}</span>
+      </div>
+      <div class="evo-changes"><ul>${(e.changes||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>
+      ${e.reasoning?`<p style="font-size:0.78rem;color:#4a5568;margin-bottom:8px;font-style:italic">${esc(e.reasoning)}</p>`:''}
+      <div class="delta-row">
+        <div class="delta-item"><div class="dk">CAGR</div><div class="dv ${colPct(em.cagr_pct)}">${pct(em.cagr_pct)} <small style="color:#4a5568">(${dc>=0?'+':''}${pct(dc)})</small></div></div>
+        <div class="delta-item"><div class="dk">Sharpe</div><div class="dv ${ds>=0?'pos':'neg'}">${fmt(em.sharpe,3)} <small style="color:#4a5568">(${ds>=0?'+':''}${fmt(ds,3)})</small></div></div>
+        <div class="delta-item"><div class="dk">Max DD</div><div class="dv neg">${pct(em.max_drawdown_pct)} <small style="color:#4a5568">(${dd>=0?'+':''}${pct(dd)})</small></div></div>
+        <div class="delta-item"><div class="dk">Win Rate</div><div class="dv ${colPct(em.win_rate_pct-50)}">${pct(em.win_rate_pct)}</div></div>
+        <div class="delta-item"><div class="dk">Trades</div><div class="dv neu">${em.total_trades||0}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Comparison table ──────────────────────────────────────────────────────────
+function renderComparison(v1m, evolution, best) {
+  const ROWS=['CAGR %','Sharpe','Sortino','Max DD %','Calmar','Win Rate %','Profit Factor','Expectancy $','Total Trades'];
+  const KEYS=['cagr_pct','sharpe','sortino','max_drawdown_pct','calmar','win_rate_pct','profit_factor','expectancy_usd','total_trades'];
+  const FMTS=[v=>pct(v),v=>fmt(v,3),v=>fmt(v,3),v=>pct(v),v=>fmt(v,3),v=>pct(v),v=>fmt(v,3),v=>'$'+fmt(v,2),v=>v];
+
+  const versions=[{ver:1,m:v1m},...evolution.map(e=>({ver:e.version,m:e.metrics}))];
+  const head=`<thead><tr><th>Metric</th>${versions.map(v=>`<th class="${v.ver===best?'best-col':''}">${v.ver===best?'★ ':''} v${v.ver}</th>`).join('')}</tr></thead>`;
+  const body=`<tbody>${ROWS.map((r,i)=>`
+    <tr><td style="color:#7d8590">${r}</td>${versions.map(v=>`<td class="${v.ver===best?'best-col':''}">${FMTS[i](v.m[KEYS[i]])}</td>`).join('')}</tr>`
+  ).join('')}</tbody>`;
+  document.getElementById('cmpTable').innerHTML=head+body;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function pct(v){ return(v!=null)?parseFloat(v).toFixed(2)+'%':'—' }
+function fmt(v,d=2){ return(v!=null)?parseFloat(v).toFixed(d):'—' }
+function colPct(v){ return v>0?'pos':v<0?'neg':'neu' }
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ── Strategy Discovery ────────────────────────────────────────────────────────
+
+function toggleDiscover() {
+  const body = document.getElementById('discoverBody');
+  const icon = document.getElementById('discoverToggleIcon');
+  const isOpen = body.classList.toggle('open');
+  icon.textContent = isOpen ? '▲ collapse' : '▼ expand';
+  if(isOpen && !_allStrategies.length) loadLibrary();
+}
+
+function loadLibrary() {
+  fetch('/api/strategy-lab/library').then(r=>r.json()).then(data => {
+    _allStrategies = data;
+    document.querySelector('.discover-badge').textContent = data.length + ' STRATEGIES';
+    renderStratGrid(data);
+  }).catch(e => {
+    document.getElementById('stratGrid').innerHTML =
+      `<div style="color:#f04040;font-size:0.78rem;padding:12px;grid-column:1/-1">Failed to load library: ${e.message}</div>`;
+  });
+}
+
+function filterCat(cat, btn) {
+  _activeCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = cat === 'all' ? _allStrategies : _allStrategies.filter(s => s.category === cat);
+  renderStratGrid(filtered);
+}
+
+function renderStratGrid(strategies) {
+  if(!strategies.length) {
+    document.getElementById('stratGrid').innerHTML =
+      '<div style="color:#4a5568;font-size:0.8rem;padding:20px;text-align:center;grid-column:1/-1">No strategies in this category.</div>';
+    return;
+  }
+  // Sort: suggested first
+  const sorted = [...strategies].sort((a,b) => {
+    const aS = _suggestedIds.has(a.id) ? 1 : 0;
+    const bS = _suggestedIds.has(b.id) ? 1 : 0;
+    return bS - aS;
+  });
+  document.getElementById('stratGrid').innerHTML = sorted.map(s => stratCard(s)).join('');
+}
+
+function stratCard(s) {
+  const isSuggested = _suggestedIds.has(s.id);
+  const suggestInfo = _suggestMeta[s.id];
+  return `<div class="strat-card ${isSuggested ? 'suggested' : ''}" id="scard-${s.id}">
+    <div class="strat-name">${esc(s.name)}</div>
+    <div class="strat-meta">
+      <span class="strat-tag tag-${s.category}">${s.category.replace('_',' ')}</span>
+      <span class="strat-tag" style="background:#1a1a2b;color:#94a3b8">${s.timeframe}</span>
+      <span class="strat-tag" style="background:#0d1a12;color:#4a5568">${s.complexity}</span>
+    </div>
+    <div class="strat-edge">${esc(s.edge)}</div>
+    ${suggestInfo ? `<div class="suggest-why">★ ${esc(suggestInfo.why_fits)}</div>
+    <div class="suggest-caveat">⚠ ${esc(suggestInfo.caveats)}</div>` : ''}
+    <div class="strat-stats">
+      <div class="strat-stat"><strong>Sharpe</strong> ${esc(s.expected_sharpe)}</div>
+      <div class="strat-stat"><strong>Win%</strong> ${esc(s.expected_winrate)}</div>
+    </div>
+    <button class="btn-load" onclick="loadStrategy('${s.id}')">▶ Load into Lab</button>
+  </div>`;
+}
+
+function aiSuggest() {
+  const query = document.getElementById('discoverQuery').value.trim();
+  if(!query) { alert('Enter what you are looking for.'); return; }
+  const marketCtx = document.getElementById('marketCtx').value.trim();
+  const btn = document.getElementById('suggestBtn');
+  btn.disabled = true; btn.textContent = 'Asking AI…';
+
+  fetch('/api/strategy-lab/suggest', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({query, market_context: marketCtx})
+  }).then(r=>r.json()).then(data => {
+    btn.disabled = false; btn.textContent = 'AI Suggest';
+    const suggestions = data.suggestions || [];
+    _suggestedIds = new Set(suggestions.map(s => s.strategy_id));
+    _suggestMeta = {};
+    suggestions.forEach(s => { _suggestMeta[s.strategy_id] = s; });
+
+    // Show summary box
+    const box = document.getElementById('suggestResult');
+    box.style.display = 'block';
+    box.innerHTML = `<div class="suggest-note"><strong style="color:#f7931a">AI Recommendation</strong> — ${esc(data.market_note||'')}</div>
+      <div class="suggest-detail">Best timeframe: <strong>${esc(data.best_timeframe||'—')}</strong> · Top ${suggestions.length} strategies highlighted below</div>`;
+
+    // Re-render grid with suggested cards first
+    const filtered = _activeCat === 'all' ? _allStrategies : _allStrategies.filter(s => s.category === _activeCat);
+    renderStratGrid(filtered);
+    // Switch to All to show all suggested
+    if(_activeCat !== 'all') {
+      document.querySelectorAll('.cat-btn')[0].click();
+    }
+  }).catch(e => {
+    btn.disabled = false; btn.textContent = 'AI Suggest';
+    alert('Suggest failed: ' + e.message);
+  });
+}
+
+// ── Source tab switching ──────────────────────────────────────────────────────
+const _SRC_TAB_IDS   = {lib:'srcTabLib',  web:'srcTabWeb',  ai:'srcTabAI'};
+const _SRC_PANEL_IDS = {lib:'srcPanelLib', web:'srcPanelWeb', ai:'srcPanelAI'};
+
+function switchSrcTab(tab) {
+  ['lib','web','ai'].forEach(t => {
+    document.getElementById(_SRC_TAB_IDS[t]).classList.toggle('active', t===tab);
+    document.getElementById(_SRC_PANEL_IDS[t]).style.display = t===tab ? '' : 'none';
+  });
+  document.getElementById('catFilterRow').style.display = tab === 'lib' ? '' : 'none';
+  document.getElementById('stratGrid').style.display   = tab === 'lib' ? '' : 'none';
+}
+
+// ── Library text filter ───────────────────────────────────────────────────────
+function filterLibSearch(val) {
+  val = val.toLowerCase();
+  const filtered = _allStrategies.filter(s =>
+    !val ||
+    s.name.toLowerCase().includes(val) ||
+    s.edge.toLowerCase().includes(val) ||
+    s.category.includes(val) ||
+    (s.description||'').toLowerCase().includes(val)
+  );
+  renderStratGrid(filtered);
+}
+
+// ── Web search ────────────────────────────────────────────────────────────────
+function webSearch() {
+  const query = document.getElementById('webQuery').value.trim();
+  if(!query) { alert('Enter a search query.'); return; }
+  const btn = document.getElementById('webBtn');
+  btn.disabled = true; btn.textContent = 'Searching…';
+  document.getElementById('webResults').innerHTML =
+    '<div style="color:#4a5568;font-size:0.78rem;padding:12px">Searching Reddit + web… (may take 10–20s)</div>';
+
+  fetch('/api/strategy-lab/web-search', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({query})
+  }).then(r => r.json()).then(data => {
+    btn.disabled = false; btn.textContent = 'Search';
+    const strategies = data.strategies || [];
+    const summary    = data.summary || '';
+    let html = '';
+    if(summary) html += `<div style="font-size:0.75rem;color:#7d8590;margin-bottom:10px;font-style:italic">${esc(summary)}</div>`;
+    if(!strategies.length) {
+      html += '<div style="color:#f04040;font-size:0.78rem">No strategies extracted. Try a more specific query.</div>';
+    } else {
+      html += strategies.map(s => `
+        <div class="web-card">
+          <div class="web-card-title">${esc(s.name||'Strategy')}</div>
+          <div class="web-card-src">
+            <span class="strat-tag tag-${s.category||'momentum'}">${(s.category||'').replace('_',' ')}</span>
+            &nbsp;${esc(s.source||'Web')} · ${esc(s.timeframe||'daily')} · ${esc(s.complexity||'medium')}
+            ${s.source_url ? ` · <a href="${esc(s.source_url)}" target="_blank" style="color:#3b82f6;font-size:0.68rem">view source</a>` : ''}
+          </div>
+          <div class="web-card-edge">${esc(s.edge||'')}</div>
+          <div style="font-size:0.72rem;color:#4a5568;margin-bottom:8px">${esc(s.description||'')}</div>
+          ${s.min_capital ? `<div style="font-size:0.68rem;color:#4a5568;margin-bottom:6px">Min capital: <strong style="color:#94a3b8">${esc(s.min_capital)}</strong></div>` : ''}
+          <button class="btn-load" onclick="loadWebStrategy(${JSON.stringify(s).replace(/"/g,'&quot;')})">▶ Load into Lab</button>
+        </div>`).join('');
+    }
+    document.getElementById('webResults').innerHTML = html;
+  }).catch(e => {
+    btn.disabled = false; btn.textContent = 'Search';
+    document.getElementById('webResults').innerHTML =
+      `<div style="color:#f04040;font-size:0.78rem">Search failed: ${esc(e.message)}</div>`;
+  });
+}
+
+function loadWebStrategy(s) {
+  setMode('generate');
+  document.getElementById('ideaArea').value =
+    s.idea_prompt ||
+    `Strategy: ${s.name}\n\nEdge: ${s.edge}\n\nDescription: ${s.description}\n\n` +
+    `Entry: ${s.entry_rules||''}\nExit: ${s.exit_rules||''}\n` +
+    `Indicators: ${(s.indicators||[]).join(', ')}\nTimeframe: ${s.timeframe}\n` +
+    `Symbols: ${(s.symbols||[]).join(', ')}\n\nSource: ${s.source}`;
+  document.querySelector('.lp').scrollIntoView({behavior:'smooth'});
+}
+
+function loadStrategy(id) {
+  const s = _allStrategies.find(x => x.id === id);
+  if(!s) return;
+  // Switch to Generate mode and pre-fill the idea
+  setMode('generate');
+  // Find the idea prompt from full library data (need to re-fetch for idea_prompt)
+  fetch('/api/strategy-lab/library-prompt?id='+encodeURIComponent(id))
+    .then(r=>r.json())
+    .then(d => {
+      document.getElementById('ideaArea').value = d.idea_prompt || s.edge + '\n\n' + s.description;
+    })
+    .catch(() => {
+      // Fallback: use edge + description
+      document.getElementById('ideaArea').value =
+        `Strategy: ${s.name}\n\nEdge: ${s.edge}\n\nDescription: ${s.description}\n\n` +
+        `Indicators: ${(s.indicators||[]).join(', ')}\nTimeframe: ${s.timeframe}\n` +
+        `Best conditions: ${s.best_conditions}\n\nSources: ${s.sources}`;
+    });
+  // Scroll to run section
+  document.querySelector('.lp').scrollIntoView({behavior:'smooth'});
+}
+
+// ── Saved Results ─────────────────────────────────────────────────────────────
+let _currentResult = null;   // set inside render() above
+
+function toggleSaved() {
+  const body = document.getElementById('savedBody');
+  const icon = document.getElementById('savedToggleIcon');
+  const open = body.classList.toggle('open');
+  icon.textContent = open ? '▲ collapse' : '▼ expand';
+  if(open) loadSavedList();
+}
+
+function openSaveDialog() {
+  if(!_currentResult) { alert('Run a strategy first.'); return; }
+  document.getElementById('saveOverlay').classList.add('open');
+  document.getElementById('saveName').focus();
+}
+
+function closeSaveDialog() {
+  document.getElementById('saveOverlay').classList.remove('open');
+}
+
+// Close dialog on overlay click
+document.getElementById('saveOverlay').addEventListener('click', function(e) {
+  if(e.target === this) closeSaveDialog();
+});
+
+function confirmSave() {
+  if(!_currentResult) return;
+  const name  = document.getElementById('saveName').value.trim() || 'Untitled';
+  const notes = document.getElementById('saveNotes').value.trim();
+  const btn   = document.querySelector('.btn-confirm-save');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  fetch('/api/strategy-lab/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({result: _currentResult, name, notes}),
+  })
+  .then(r => r.json())
+  .then(d => {
+    closeSaveDialog();
+    showToast('✅ Saved: ' + name);
+    loadSavedList();   // refresh list
+    // If saved panel is closed, open it to show the new entry
+    if(!document.getElementById('savedBody').classList.contains('open')) toggleSaved();
+  })
+  .catch(e => showToast('❌ Save failed: ' + e.message))
+  .finally(() => { btn.disabled = false; btn.textContent = 'Save to Database'; });
+}
+
+function loadSavedList() {
+  fetch('/api/strategy-lab/saved')
+    .then(r => r.json())
+    .then(items => {
+      document.getElementById('savedBadge').textContent = items.length + ' SAVED';
+      const el = document.getElementById('savedList');
+      if(!items.length) {
+        el.innerHTML = '<div class="saved-empty">No saved results yet — run a strategy and click "Save Result"</div>';
+        return;
+      }
+      el.innerHTML = items.map(item => {
+        const verd   = item.verdict || '';
+        const cls    = verd.includes('LIVE')?'trade':verd.includes('PAPER')?'paper':verd.includes('REJECT')?'reject':'needs';
+        const sharpe = item.sharpe != null ? 'Sharpe ' + item.sharpe.toFixed(2) : '';
+        const cagr   = item.cagr   != null ? 'CAGR '   + item.cagr.toFixed(1)+'%' : '';
+        const dd     = item.max_dd  != null ? 'DD '     + item.max_dd.toFixed(1)+'%' : '';
+        const syms   = (item.symbols||[]).join(', ') || '—';
+        const date   = item.saved_at ? new Date(item.saved_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        return `<div class="saved-item">
+          <div class="saved-item-info" onclick="loadSavedResult('${esc(item.id)}')">
+            <div class="saved-item-name" title="${esc(item.name)}">${esc(item.name)}</div>
+            <div class="saved-item-meta">
+              ${verd ? `<span class="saved-item-tag tag-${cls}">${esc(verd)}</span>` : ''}
+              <span class="saved-item-tag" style="background:#1a1a2b;color:#a855f7;border:1px solid #a855f744">${esc(item.mode||'validate')}</span>
+              <span class="saved-item-tag" style="background:#21262d;color:#7d8590">v${item.best_version||1} best</span>
+            </div>
+            <div class="saved-item-stats">${[sharpe,cagr,dd].filter(Boolean).join(' · ')} · ${esc(syms)}</div>
+            ${item.notes ? `<div class="saved-item-stats" style="color:#7d8590;font-style:italic;margin-top:2px">${esc(item.notes.slice(0,80))}${item.notes.length>80?'…':''}</div>` : ''}
+            <div class="saved-item-date">${esc(date)}</div>
+          </div>
+          <button class="btn-del-saved" onclick="deleteSaved('${esc(item.id)}',this)" title="Delete">✕</button>
+        </div>`;
+      }).join('');
+    })
+    .catch(e => console.error('loadSavedList:', e));
+}
+
+function loadSavedResult(id) {
+  fetch('/api/strategy-lab/saved/' + id)
+    .then(r => r.json())
+    .then(doc => {
+      if(!doc.result) { showToast('❌ No result data in this record'); return; }
+      _currentResult = doc.result;
+      render(doc.result);
+      document.getElementById('resultsPanel').scrollIntoView({behavior:'smooth'});
+      showToast('📂 Loaded: ' + (doc.name || 'saved result'));
+    })
+    .catch(e => showToast('❌ Load failed: ' + e.message));
+}
+
+function deleteSaved(id, btn) {
+  if(!confirm('Delete this saved result?')) return;
+  btn.disabled = true;
+  fetch('/api/strategy-lab/saved/' + id, {method:'DELETE'})
+    .then(r => r.json())
+    .then(() => { loadSavedList(); showToast('Deleted'); })
+    .catch(e => { showToast('❌ Delete failed'); btn.disabled = false; });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('saveToast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// Load saved count on page load
+loadSavedList();
+</script>
+</body>
+</html>

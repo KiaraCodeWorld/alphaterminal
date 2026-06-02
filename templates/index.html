@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlphaTerminal</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .logo-area {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .logo-area .wordmark {
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .logo-area .wordmark span { color: #1D9E75; }
+  .logo-area .tagline {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #7d8590;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 14px;
+    padding: 32px 28px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.18s;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .card-desc {
+    font-size: 0.875rem;
+    color: #7d8590;
+    line-height: 1.55;
+  }
+  .card-arrow {
+    margin-top: auto;
+    font-size: 0.8rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    color: #7d8590;
+    border: 1px solid #30363d;
+  }
+
+  footer {
+    margin-top: 64px;
+    font-size: 0.78rem;
+    color: #484f58;
+  }
+</style>
+</head>
+<body>
+
+<div class="logo-area">
+  <div class="wordmark">Alpha<span>Terminal</span></div>
+  <div class="tagline">Your personal trading command center</div>
+</div>
+
+<div class="grid">
+
+  <a class="card" href="/watchlist" style="--accent:#e05a2e;">
+    <div class="card-icon">&#128202;</div>
+    <div class="card-title">Watchlist &amp; Dip Buy</div>
+    <div class="card-desc">
+      Track your full watchlist with RSI, price change, volume profile, support/resistance, and AI analysis.
+    </div>
+    <div class="badge-row">
+      <span class="badge">RSI sorted</span>
+      <span class="badge">AI analysis</span>
+      <span class="badge">TradingView</span>
+    </div>
+    <div class="card-arrow">Open watchlist &rarr;</div>
+  </a>
+
+  <a class="card" href="/alerts" style="--accent:#3b82f6;">
+    <div class="card-icon">🔔</div>
+    <div class="card-title">Alert Trading Panel</div>
+    <div class="card-desc">
+      Monitor email-triggered trade alerts, view analyst targets, auto-trade queue, Fear &amp; Greed index.
+    </div>
+    <div class="badge-row">
+      <span class="badge">Live alerts</span>
+      <span class="badge">Auto-trade</span>
+      <span class="badge">F&amp;G index</span>
+    </div>
+    <div class="card-arrow">Open panel &rarr;</div>
+  </a>
+
+  <a class="card" href="/fire" style="--accent:#1D9E75;">
+    <div class="card-icon">🔥</div>
+    <div class="card-title">FIRE &amp; Retirement Planner</div>
+    <div class="card-desc">
+      Track portfolios across FIRE, Dividend Income, AI-focused, and ETF strategies with opportunity scoring.
+    </div>
+    <div class="badge-row">
+      <span class="badge">4 strategies</span>
+      <span class="badge">Opp. score</span>
+      <span class="badge">DCA zones</span>
+    </div>
+    <div class="card-arrow">Open planner &rarr;</div>
+  </a>
+
+  <a class="card" href="/crypto" style="--accent:#f7931a;">
+    <div class="card-icon">&#8383;</div>
+    <div class="card-title">Crypto Monitor</div>
+    <div class="card-desc">
+      Real-time prices, RSI, 52-week range, and 7/30-day performance for Bitcoin, Ethereum, SOL, XRP and more.
+    </div>
+    <div class="badge-row">
+      <span class="badge">BTC &bull; ETH</span>
+      <span class="badge">SOL &bull; XRP</span>
+      <span class="badge">RSI</span>
+    </div>
+    <div class="card-arrow">Open monitor &rarr;</div>
+  </a>
+
+  <a class="card" href="/trades" style="--accent:#00d68f;">
+    <div class="card-icon">&#128200;</div>
+    <div class="card-title">Trade Monitor</div>
+    <div class="card-desc">
+      Log and track open &amp; closed trades with real-time P&amp;L, ATR stop levels, target/stop-loss, and risk-reward ratio.
+    </div>
+    <div class="badge-row">
+      <span class="badge">Live P&amp;L</span>
+      <span class="badge">R:R ratio</span>
+      <span class="badge">Auto-close</span>
+    </div>
+    <div class="card-arrow">Open monitor &rarr;</div>
+  </a>
+
+  <a class="card" href="/new-finds" style="--accent:#f59e0b;">
+    <div class="card-icon">&#9889;</div>
+    <div class="card-title">New Finds</div>
+    <div class="card-desc">
+      Stocks &amp; crypto popping up on Reddit, Twitter, newsletters and Discord this week — log the thesis, track the outcome.
+    </div>
+    <div class="badge-row">
+      <span class="badge">Social radar</span>
+      <span class="badge">Weekly picks</span>
+      <span class="badge">Track outcomes</span>
+    </div>
+    <div class="card-arrow">Open finds &rarr;</div>
+  </a>
+
+  <a class="card" href="/notes" style="--accent:#facc15;">
+    <div class="card-icon">&#128221;</div>
+    <div class="card-title">Notes</div>
+    <div class="card-desc">
+      Quickly jot down trade ideas, observations, and reminders tied to specific tickers or general market context.
+    </div>
+    <div class="badge-row">
+      <span class="badge">Per-ticker</span>
+      <span class="badge">Timestamped</span>
+      <span class="badge">Searchable</span>
+    </div>
+    <div class="card-arrow">Open notes &rarr;</div>
+  </a>
+
+  <a class="card" href="/algobot" style="--accent:#7c6af7;">
+    <div class="card-icon">&#129302;</div>
+    <div class="card-title">AlgoBot Report</div>
+    <div class="card-desc">
+      Daily performance report for each running algobot — win rate, P&L, max loss, and drill-down into individual trades.
+    </div>
+    <div class="badge-row">
+      <span class="badge">Win rate</span>
+      <span class="badge">Daily P&L</span>
+      <span class="badge">Trade drill-down</span>
+    </div>
+    <div class="card-arrow">Open report &rarr;</div>
+  </a>
+
+  <a class="card" href="/strategy-lab" style="--accent:#a855f7;">
+    <div class="card-icon">&#129514;</div>
+    <div class="card-title">AI Strategy Lab</div>
+    <div class="card-desc">
+      Validate, stress-test &amp; evolve trading strategies with a 5-agent AI team — backtest, regime analysis, 3-generation evolution.
+    </div>
+    <div class="badge-row">
+      <span class="badge">5 AI agents</span>
+      <span class="badge">Backtesting</span>
+      <span class="badge">Evolution</span>
+    </div>
+    <div class="card-arrow">Open lab &rarr;</div>
+  </a>
+
+</div>
+
+<footer>AlphaTerminal &mdash; powered by yfinance &amp; MongoDB</footer>
+
+</body>
+</html>

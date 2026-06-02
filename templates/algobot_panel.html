@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoBot Report · AlphaTerminal</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e2e8f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+
+/* ── Nav ── */
+.header { position: sticky; top: 0; z-index: 100; background: #161b22; border-bottom: 1px solid #21262d; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 16px; }
+.header-title { font-size: 1.05rem; font-weight: 700; }
+.header-spacer { flex: 1; }
+.nav-link { color: #7a8499; font-size: 0.82rem; font-weight: 500; padding: 4px 10px; border-radius: 6px; transition: color .15s, background .15s; }
+.nav-link:hover { color: #e2e8f4; background: #1e2536; }
+.nav-link.active { color: #7c6af7; }
+
+/* ── Layout ── */
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+.page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.page-header h1 { font-size: 1.3rem; font-weight: 700; color: #7c6af7; display: flex; align-items: center; gap: 8px; }
+
+/* ── Bot selector ── */
+.bot-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.bot-tab { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 6px 16px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: #7a8499; transition: all .15s; }
+.bot-tab:hover { color: #e2e8f4; border-color: #2a3347; }
+.bot-tab.active { background: #1e1a36; color: #7c6af7; border-color: #7c6af744; }
+
+/* ── Stat cards ── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.stat-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 14px 16px; }
+.stat-label { font-size: 0.62rem; color: #4a5568; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.stat-value { font-size: 1.25rem; font-weight: 700; color: #e2e8f4; }
+.stat-sub   { font-size: 0.72rem; color: #4a5568; margin-top: 2px; }
+.green  { color: #00d68f !important; }
+.red    { color: #f04040 !important; }
+.purple { color: #7c6af7 !important; }
+.amber  { color: #f59e0b !important; }
+
+/* ── Capital chart ── */
+.capital-section { margin-bottom: 28px; }
+.chart-wrap { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px 18px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; overflow-x: auto; padding-bottom: 4px; }
+.chart-bar-group { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+.chart-bar-stack { display: flex; flex-direction: column-reverse; width: 28px; }
+.bar-locked   { background: #f59e0b; border-radius: 3px 3px 0 0; min-height: 2px; }
+.bar-closed   { background: #374151; border-radius: 0; min-height: 1px; }
+.bar-date     { font-size: 0.58rem; color: #374151; transform: rotate(-45deg); white-space: nowrap; margin-top: 4px; transform-origin: top left; height: 28px; }
+.chart-legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+.legend-item  { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #4a5568; }
+.legend-dot   { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── Section title ── */
+.sec-title { font-size: 0.68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #4a5568; margin-bottom: 12px; }
+
+/* ── Daily summary table ── */
+table.day-tbl { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+table.day-tbl th { background: #161b22; color: #4a5568; padding: 9px 12px; border-bottom: 1px solid #21262d; text-align: left; font-size: 0.68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+table.day-tbl td { background: #0d1117; color: #e2e8f4; padding: 10px 12px; border-bottom: 1px solid #161b22; vertical-align: middle; }
+table.day-tbl tr:hover td { background: #13181f; cursor: pointer; }
+table.day-tbl tr.selected td { background: #1a1a2e; }
+
+.pnl-pos { color: #00d68f; font-weight: 700; }
+.pnl-neg { color: #f04040; font-weight: 700; }
+.wr-bar-wrap { width: 60px; height: 5px; background: #1e2536; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.wr-bar { height: 100%; border-radius: 3px; }
+.tag { background: #1e2536; color: #7a8499; border-radius: 4px; padding: 1px 6px; font-size: 0.66rem; margin: 1px; display: inline-block; }
+
+/* ── Detail drawer ── */
+.detail-panel { background: #0d1117; border: 1px solid #21262d; border-radius: 12px; padding: 20px 22px; margin-top: 8px; margin-bottom: 20px; display: none; }
+.detail-panel.open { display: block; }
+.detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.detail-title { font-size: 0.9rem; font-weight: 700; color: #e2e8f4; }
+.close-btn { margin-left: auto; background: #1e2536; color: #94a3b8; border: 1px solid #2a3347; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; }
+.close-btn:hover { color: #e2e8f4; }
+
+table.trade-tbl { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+table.trade-tbl th { background: #161b22; color: #4a5568; padding: 7px 10px; border-bottom: 1px solid #21262d; text-align: left; font-size: 0.65rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+table.trade-tbl td { background: #0d1117; color: #e2e8f4; padding: 8px 10px; border-bottom: 1px solid #161b22; vertical-align: middle; }
+table.trade-tbl tr:hover td { background: #13181f; }
+
+.status-open   { background: #0d2b1a; color: #00d68f; border: 1px solid #00d68f44; border-radius: 10px; padding: 1px 8px; font-size: 0.67rem; font-weight: 700; }
+.status-closed { background: #161b22; color: #7a8499; border: 1px solid #2a3347; border-radius: 10px; padding: 1px 8px; font-size: 0.67rem; font-weight: 700; }
+.reason-badge { background: #1e1a36; color: #a78bfa; border-radius: 4px; padding: 2px 7px; font-size: 0.67rem; }
+
+.empty { color: #374151; padding: 32px 0; text-align: center; }
+.loading { color: #4a5568; padding: 20px 0; text-align: center; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">AlphaTerminal</span>
+  <div style="width:1px;height:24px;background:#21262d;"></div>
+  <a href="/" class="nav-link">Dashboard</a>
+  <a href="/alerts" class="nav-link">Alerts</a>
+  <a href="/trades" class="nav-link">Trades</a>
+  <a href="/watchlist" class="nav-link">Watchlist</a>
+  <a href="/new-finds" class="nav-link">New Finds</a>
+  <a href="/algobot" class="nav-link active">AlgoBots</a>
+  <div class="header-spacer"></div>
+</div>
+
+<div class="main">
+
+  <div class="page-header">
+    <h1>&#129302; AlgoBot Performance</h1>
+    <div class="bot-tabs">
+      {% for key, bot in bots.items() %}
+      <button class="bot-tab{% if loop.first %} active{% endif %}"
+              onclick="selectBot('{{ key }}', this)">{{ bot.label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Overall stat cards -->
+  <div id="statsGrid" class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Loading</div><div class="stat-value">…</div></div>
+  </div>
+
+  <!-- Capital chart -->
+  <div class="capital-section">
+    <div class="sec-title">Capital Deployed &amp; Locked per Day</div>
+    <div class="chart-wrap">
+      <div class="chart-bars" id="capitalChart"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Capital still locked (open trades)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#374151"></div>Capital in closed trades</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily summary table -->
+  <div class="sec-title">Daily Breakdown — click a row to expand trades</div>
+  <div id="summaryContainer"><div class="loading">Loading…</div></div>
+
+  <!-- Trade detail drawer (injected between rows) -->
+  <div id="detailPanel" class="detail-panel">
+    <div class="detail-header">
+      <span class="detail-title" id="detailTitle">Trades</span>
+      <button class="close-btn" onclick="closeDetail()">✕ Close</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+
+</div>
+
+<script>
+let _currentBot  = "{{ bots.keys()|list|first }}";
+let _selectedRow = null;
+
+function selectBot(key, btn) {
+  _currentBot = key;
+  document.querySelectorAll(".bot-tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  closeDetail();
+  loadSummary();
+}
+
+async function loadSummary() {
+  document.getElementById("summaryContainer").innerHTML = `<div class="loading">Loading…</div>`;
+  document.getElementById("statsGrid").innerHTML = `<div class="stat-card"><div class="stat-label">Loading</div><div class="stat-value">…</div></div>`;
+
+  const res  = await fetch(`/api/algobot/${_currentBot}/summary`);
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById("summaryContainer").innerHTML = `<div class="empty">Error: ${esc(data.error||"Unknown")}</div>`;
+    return;
+  }
+  renderStats(data.totals);
+  renderDays(data.days);
+}
+
+function renderStats(t) {
+  const pnlCls = t.total_pnl >= 0 ? "green" : "red";
+  document.getElementById("statsGrid").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Trades</div>
+      <div class="stat-value purple">${t.total_trades}</div>
+      <div class="stat-sub">${t.open_trades} open · ${t.closed_trades} closed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-value ${t.win_rate>=50?"green":"red"}">${t.win_rate}%</div>
+      <div class="stat-sub">of closed trades</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total P&amp;L</div>
+      <div class="stat-value ${pnlCls}">${fmt$(t.total_pnl)}</div>
+      <div class="stat-sub">avg ${fmt$(t.avg_pnl)} / trade</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Best Trade</div>
+      <div class="stat-value green">${fmt$(t.best_trade)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Max Loss</div>
+      <div class="stat-value red">${fmt$(t.max_loss)}</div>
+    </div>
+    <div class="stat-card" style="border-top:2px solid #f59e0b44;">
+      <div class="stat-label">Capital Locked Now</div>
+      <div class="stat-value amber">${fmtK(t.capital_locked)}</div>
+      <div class="stat-sub">${t.open_trades} open position${t.open_trades!==1?"s":""}</div>
+    </div>
+    <div class="stat-card" style="border-top:2px solid #7c6af744;">
+      <div class="stat-label">Total Deployed</div>
+      <div class="stat-value purple">${fmtK(t.capital_deployed)}</div>
+      <div class="stat-sub">avg ${fmtK(t.avg_trade_size)} / trade</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Trading Days</div>
+      <div class="stat-value">${t.trading_days}</div>
+    </div>`;
+}
+
+function renderDays(days) {
+  const c = document.getElementById("summaryContainer");
+  if (!days.length) { c.innerHTML = `<div class="empty">No trades found.</div>`; return; }
+
+  renderCapitalChart(days);
+
+  const rows = days.map(d => {
+    const pnlCls  = d.total_pnl >= 0 ? "pnl-pos" : "pnl-neg";
+    const wrColor = d.win_rate >= 60 ? "#00d68f" : d.win_rate >= 40 ? "#f59e0b" : "#f04040";
+    const tags    = d.tickers.map(t => `<span class="tag">${esc(t)}</span>`).join("");
+
+    // Open trades cell — amber if any still open
+    const openCell = d.open > 0
+      ? `<span style="background:#2b220d;color:#f59e0b;border:1px solid #f59e0b44;border-radius:10px;padding:1px 8px;font-size:.7rem;font-weight:700;">${d.open} OPEN</span>`
+      : `<span style="color:#374151;font-size:.78rem;">—</span>`;
+
+    // Capital locked cell
+    const lockedCell = d.capital_locked > 0
+      ? `<span style="color:#f59e0b;font-weight:700;">${fmtK(d.capital_locked)}</span>`
+      : `<span style="color:#374151;">—</span>`;
+
+    return `<tr onclick="toggleDay('${d.date}', this)" id="row-${d.date}">
+      <td style="font-weight:700;color:#e2e8f4;white-space:nowrap;">${d.date}</td>
+      <td style="color:#94a3b8;">${d.total} <span style="font-size:.7rem;color:#374151;">(${d.closed} closed)</span></td>
+      <td>${openCell}</td>
+      <td>${lockedCell}</td>
+      <td style="color:#4a5568;font-size:.78rem;">${fmtK(d.capital_deployed)}</td>
+      <td>
+        <div style="display:flex;align-items:center;">
+          <span class="wr-bar-wrap"><span class="wr-bar" style="width:${d.win_rate}%;background:${wrColor};"></span></span>
+          <span style="color:${wrColor};font-weight:700;">${d.win_rate}%</span>
+        </div>
+      </td>
+      <td class="${pnlCls}">${fmt$(d.total_pnl)}</td>
+      <td class="${d.max_loss < 0 ? "pnl-neg" : "pnl-pos"}">${fmt$(d.max_loss)}</td>
+      <td class="green" style="font-size:0.8rem;">${fmt$(d.best_trade)}</td>
+      <td style="color:#4a5568;font-size:0.78rem;">${tags}</td>
+    </tr>`;
+  }).join("");
+
+  c.innerHTML = `<table class="day-tbl">
+    <thead><tr>
+      <th>DATE</th>
+      <th>TRADES</th>
+      <th>OPEN NOW</th>
+      <th>CAPITAL LOCKED</th>
+      <th>DEPLOYED</th>
+      <th>WIN %</th>
+      <th>DAY P&amp;L</th>
+      <th>MAX LOSS</th>
+      <th>BEST</th>
+      <th>TICKERS</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderCapitalChart(days) {
+  const chart = document.getElementById("capitalChart");
+  if (!chart) return;
+  chart.innerHTML = "";
+
+  // Show last 20 days, oldest→newest left→right
+  const slice = days.slice(0, 20).reverse();
+  const maxCap = Math.max(...slice.map(d => d.capital_deployed || 0), 1);
+
+  slice.forEach(d => {
+    const totalH  = 70;  // px height of chart area
+    const lockH   = Math.max(Math.round((d.capital_locked   / maxCap) * totalH), d.capital_locked   > 0 ? 3 : 0);
+    const closeH  = Math.max(Math.round(((d.capital_deployed - d.capital_locked) / maxCap) * totalH), d.capital_deployed > d.capital_locked ? 2 : 0);
+
+    const group = document.createElement("div");
+    group.className = "chart-bar-group";
+    group.title = `${d.date}\nTotal: ${fmtK(d.capital_deployed)}\nLocked: ${fmtK(d.capital_locked)}\nOpen: ${d.open} | Closed: ${d.closed}`;
+
+    const stack = document.createElement("div");
+    stack.className = "chart-bar-stack";
+    stack.style.height = totalH + "px";
+    stack.style.justifyContent = "flex-end";
+    stack.style.display = "flex";
+    stack.style.flexDirection = "column";
+
+    if (lockH > 0) {
+      const b1 = document.createElement("div");
+      b1.className = "bar-locked";
+      b1.style.height = lockH + "px";
+      stack.appendChild(b1);
+    }
+    if (closeH > 0) {
+      const b2 = document.createElement("div");
+      b2.className = "bar-closed";
+      b2.style.height = closeH + "px";
+      stack.appendChild(b2);
+    }
+
+    const lbl = document.createElement("div");
+    lbl.className = "bar-date";
+    lbl.textContent = d.date.slice(5);  // MM-DD
+
+    group.appendChild(stack);
+    group.appendChild(lbl);
+    chart.appendChild(group);
+  });
+}
+
+let _openDate = null;
+
+async function toggleDay(date, row) {
+  const panel = document.getElementById("detailPanel");
+
+  // Close if same row clicked
+  if (_openDate === date) { closeDetail(); return; }
+
+  // Deselect old row
+  if (_selectedRow) _selectedRow.classList.remove("selected");
+  _selectedRow = row;
+  row.classList.add("selected");
+  _openDate = date;
+
+  // Move panel after clicked row
+  row.parentNode.insertBefore(panel, row.nextSibling);
+  panel.classList.add("open");
+  document.getElementById("detailTitle").textContent = `Trades — ${date}`;
+  document.getElementById("detailBody").innerHTML = `<div class="loading">Loading trades…</div>`;
+
+  const res  = await fetch(`/api/algobot/${_currentBot}/day/${date}`);
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById("detailBody").innerHTML = `<div class="empty">Error: ${esc(data.error)}</div>`;
+    return;
+  }
+  renderDetailTrades(data.trades);
+}
+
+function closeDetail() {
+  const panel = document.getElementById("detailPanel");
+  panel.classList.remove("open");
+  // Move back to end of main so it doesn't affect layout
+  document.querySelector(".main").appendChild(panel);
+  if (_selectedRow) { _selectedRow.classList.remove("selected"); _selectedRow = null; }
+  _openDate = null;
+}
+
+function renderDetailTrades(trades) {
+  if (!trades.length) {
+    document.getElementById("detailBody").innerHTML = `<div class="empty">No trades for this date.</div>`;
+    return;
+  }
+
+  const rows = trades.map(t => {
+    const pnlCls    = (t.pnl||0) >= 0 ? "pnl-pos" : "pnl-neg";
+    const statusBadge = (t.status||"").toLowerCase() === "closed"
+      ? `<span class="status-closed">CLOSED</span>`
+      : `<span class="status-open">OPEN</span>`;
+    const reason = t.exit_reason
+      ? `<span class="reason-badge">${esc(t.exit_reason)}</span>` : "—";
+    const bars = t.bars_held != null ? t.bars_held : "—";
+    const rvol = t.rvol != null ? t.rvol + "x" : "—";
+    const news = t.has_news ? `<span style="color:#f59e0b;font-size:.75rem;">&#9888; news</span>` : "";
+    const tvUrl = `https://www.tradingview.com/symbols/${(t.ticker||"").replace(".","-")}/`;
+
+    return `<tr>
+      <td><a href="${tvUrl}" target="_blank" style="color:#00d68f;font-weight:700;">${esc(t.ticker||"")}</a> ${news}</td>
+      <td>${statusBadge}</td>
+      <td style="white-space:nowrap;">${esc(t.entry_time||"")} → ${esc(t.exit_time||"—")}</td>
+      <td style="color:#e2e8f4;font-weight:600;">$${fmt(t.entry_price)}</td>
+      <td style="color:#e2e8f4;">$${fmt(t.exit_price)}</td>
+      <td class="${pnlCls}">${fmt$(t.pnl)}</td>
+      <td style="color:#94a3b8;">${fmt(t.pct_return != null ? t.pct_return*100 : null, 2)}%</td>
+      <td style="color:#7a8499;">${t.shares||"—"}</td>
+      <td style="color:#60a5fa;">${rvol}</td>
+      <td>${reason}</td>
+      <td style="color:#4a5568;">${bars} bars</td>
+      <td style="color:#4a5568;">${t.sector_etf||"—"}</td>
+    </tr>`;
+  }).join("");
+
+  // Mini summary
+  const closed = trades.filter(t => (t.status||"").toLowerCase() === "closed");
+  const pnls   = closed.map(t => t.pnl||0);
+  const wins   = pnls.filter(p => p > 0).length;
+  const dayPnl = pnls.reduce((a,b) => a+b, 0);
+  const wr     = pnls.length ? (wins/pnls.length*100).toFixed(0) : 0;
+  const pnlCls = dayPnl >= 0 ? "green" : "red";
+
+  document.getElementById("detailBody").innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:#161b22;border-radius:8px;border:1px solid #21262d;">
+      <span style="font-size:.78rem;color:#4a5568;">TRADES <b style="color:#e2e8f4;">${trades.length}</b></span>
+      <span style="font-size:.78rem;color:#4a5568;">WIN RATE <b class="${wr>=50?"green":"red"}">${wr}%</b></span>
+      <span style="font-size:.78rem;color:#4a5568;">DAY P&L <b class="${pnlCls}">${fmt$(dayPnl)}</b></span>
+      <span style="font-size:.78rem;color:#4a5568;">BEST <b class="green">${fmt$(pnls.length?Math.max(...pnls):0)}</b></span>
+      <span style="font-size:.78rem;color:#4a5568;">WORST <b class="red">${fmt$(pnls.length?Math.min(...pnls):0)}</b></span>
+    </div>
+    <table class="trade-tbl">
+      <thead><tr>
+        <th>TICKER</th><th>STATUS</th><th>TIME</th>
+        <th>ENTRY</th><th>EXIT</th><th>P&L</th><th>RET%</th>
+        <th>SHARES</th><th>RVOL</th><th>EXIT REASON</th><th>BARS</th><th>SECTOR ETF</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function fmt(v, dec=2)  { return v!=null ? Number(v).toFixed(dec) : "—"; }
+function fmt$(v)        { if(v==null) return "—"; return (v>=0?"+$":"-$")+Math.abs(v).toFixed(2); }
+function fmtK(v)        {
+  if (v==null || v===0) return "$0";
+  if (Math.abs(v) >= 1000) return "$" + (v/1000).toFixed(1) + "k";
+  return "$" + Math.abs(v).toFixed(0);
+}
+function esc(s)         { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// Init
+loadSummary();
+</script>
+</body>
+</html>

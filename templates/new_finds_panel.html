@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New Finds · AlphaTerminal</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e2e8f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:100;background:#161b22;border-bottom:1px solid #21262d;padding:0 24px;height:56px;display:flex;align-items:center;gap:16px}
+.nav-brand{font-size:1.05rem;font-weight:700;color:#e2e8f4}
+.nav-link{color:#7a8499;font-size:.82rem;font-weight:500;padding:4px 10px;border-radius:6px;transition:color .15s,background .15s}
+.nav-link:hover{color:#e2e8f4;background:#1e2536}
+.nav-link.active{color:#f59e0b}
+.nav-spacer{flex:1}
+
+/* layout */
+.page{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+
+/* section header */
+.sec-hdr{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.sec-title{font-size:1rem;font-weight:700;color:#e2e8f4;display:flex;align-items:center;gap:8px}
+.sec-sub{font-size:.78rem;color:#4a5568;flex:1}
+
+/* buttons */
+.btn{border-radius:6px;padding:7px 16px;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid #21262d;background:#161b22;color:#e2e8f4;transition:background .15s;white-space:nowrap}
+.btn:hover{background:#1e2536}
+.btn:disabled{opacity:.5;cursor:default}
+.btn-amber{background:#2b220d;color:#f59e0b;border-color:#f59e0b44}
+.btn-amber:hover{background:#3d300d}
+.btn-green{background:#0d2b1a;color:#00d68f;border-color:#00d68f44}
+.btn-green:hover{background:#0d3d22}
+
+/* cards grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:32px}
+
+/* skeleton */
+.skeleton{background:#161b22;border:1px solid #21262d;border-radius:10px;height:180px;display:flex;align-items:center;justify-content:center;color:#374151;font-size:.82rem}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}
+.pulsing{animation:pulse 1.4s ease-in-out infinite}
+
+/* reco card */
+.rcard{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:11px}
+.rcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.rcard-ticker{font-size:1.15rem;font-weight:800;color:#f59e0b}
+.rcard-ticker:hover{color:#fbbf24}
+.rcard-name{font-size:.75rem;color:#4a5568;margin-top:2px}
+.rcard-price{text-align:right}
+.rcard-price-val{font-size:1rem;font-weight:700;color:#e2e8f4}
+.rcard-price-chg{font-size:.75rem}
+
+.badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{font-size:.67rem;font-weight:600;padding:2px 9px;border-radius:20px;border:1px solid}
+
+.verdict-STRONG_BUY{background:#0d2b1a;color:#00d68f;border-color:#00d68f55}
+.verdict-BUY_DIP   {background:#0d2020;color:#34d399;border-color:#34d39955}
+.verdict-WATCH     {background:#2b220d;color:#f59e0b;border-color:#f59e0b55}
+.verdict-AVOID     {background:#2b0d0d;color:#f04040;border-color:#f0404055}
+
+.badge-source  {background:#1e2536;color:#94a3b8;border-color:#2a3347}
+.badge-category{background:#1e2a3a;color:#60a5fa;border-color:#1e3a5f}
+.badge-bull    {background:#0d2b1a;color:#00d68f;border-color:#00d68f44}
+.badge-bear    {background:#2b0d0d;color:#f04040;border-color:#f0404044}
+.badge-neutral {background:#1e2536;color:#94a3b8;border-color:#2a3347}
+.badge-watch2  {background:#2b220d;color:#f59e0b;border-color:#f59e0b44}
+
+.rcard-reason{font-size:.82rem;color:#94a3b8;line-height:1.5}
+.rcard-catalyst{font-size:.79rem;color:#60a5fa}
+
+.targets{display:flex;gap:8px;flex-wrap:wrap}
+.target-box{flex:1;min-width:80px;background:#0d1117;border:1px solid #21262d;border-radius:7px;padding:8px 12px;text-align:center}
+.target-box .tb-lbl{font-size:.6rem;color:#4a5568;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.target-box .tb-val{font-size:.9rem;font-weight:700;color:#e2e8f4}
+.target-box .tb-sub{font-size:.7rem;margin-top:2px}
+
+.cases{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.case-box{background:#0d1117;border:1px solid #21262d;border-radius:7px;padding:9px 11px}
+.case-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.case-box ul{padding-left:14px}
+.case-box li{font-size:.78rem;color:#94a3b8;margin-bottom:4px;line-height:1.4}
+
+.conf-row{display:flex;align-items:center;gap:8px}
+.conf-bar-bg{flex:1;height:5px;background:#1e2536;border-radius:3px}
+.conf-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.conf-num{font-size:.85rem;font-weight:700}
+.conf-denom{color:#374151;font-size:.65rem}
+.hype-note{font-size:.74rem;color:#4a5568;margin-top:4px}
+
+.add-btn{background:#f59e0b12;color:#f59e0b;border:1px solid #f59e0b33;border-radius:6px;padding:6px 14px;font-size:.76rem;font-weight:700;cursor:pointer;align-self:flex-start;transition:background .12s}
+.add-btn:hover{background:#f59e0b25}
+.add-btn:disabled{opacity:.5;cursor:default}
+
+.divider{border:none;border-top:1px solid #21262d;margin:28px 0}
+
+/* add-find form */
+.add-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 22px;margin-bottom:24px}
+.form-label{font-size:.68rem;color:#4a5568;font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field input,.form-field select,.form-field textarea{background:#0d1117;border:1px solid #21262d;border-radius:6px;color:#e2e8f4;font-size:.85rem;padding:7px 10px;outline:none;transition:border-color .15s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:#f59e0b55}
+.form-field textarea{resize:vertical;min-height:36px}
+.form-msg{font-size:.78rem;color:#7a8499;margin-top:6px}
+
+/* finds list */
+.finds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.find-card{background:#161b22;border:1px solid #21262d;border-left:3px solid #f59e0b;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.find-card.status-added_to_watchlist{border-left-color:#00d68f}
+.find-card.status-passed{border-left-color:#374151;opacity:.6}
+
+.fc-top{display:flex;align-items:flex-start;gap:10px}
+.fc-ticker{font-size:1.1rem;font-weight:800;color:#f59e0b}
+.fc-ticker:hover{color:#fbbf24}
+.fc-name{font-size:.75rem;color:#4a5568}
+.fc-spacer{flex:1}
+.fc-why{font-size:.82rem;color:#94a3b8;line-height:1.5}
+.fc-link{font-size:.75rem;color:#3b82f6;word-break:break-all}
+.fc-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fc-date{font-size:.7rem;color:#374151}
+.fc-actions{margin-left:auto;display:flex;gap:5px;align-items:center}
+.status-sel{background:#0d1117;border:1px solid #21262d;border-radius:5px;color:#e2e8f4;font-size:.7rem;padding:3px 6px;outline:none;cursor:pointer}
+.del-btn{background:#2b0d0d;color:#f04040;border:1px solid #f0404044;border-radius:5px;padding:3px 8px;font-size:.7rem;font-weight:600;cursor:pointer}
+
+/* toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.toolbar select{background:#161b22;border:1px solid #21262d;border-radius:6px;color:#e2e8f4;font-size:.82rem;padding:6px 10px;outline:none}
+.count-badge{background:#1e2536;color:#94a3b8;border:1px solid #2a3347;border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600}
+.week-lbl{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#374151;padding:4px 0 10px;border-bottom:1px solid #21262d;margin-bottom:12px}
+.empty{color:#374151;text-align:center;padding:40px 0;font-size:.9rem}
+.status-msg{font-size:.82rem;color:#4a5568;padding:12px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-brand">AlphaTerminal</span>
+  <div style="width:1px;height:24px;background:#21262d"></div>
+  <a href="/" class="nav-link">Dashboard</a>
+  <a href="/alerts" class="nav-link">Alerts</a>
+  <a href="/trades" class="nav-link">Trades</a>
+  <a href="/notes" class="nav-link">Notes</a>
+  <a href="/watchlist" class="nav-link">Watchlist</a>
+  <a href="/new-finds" class="nav-link active">New Finds</a>
+  <div class="nav-spacer"></div>
+</nav>
+
+<div class="page">
+
+  <!-- ── AI Recommendations ── -->
+  <div class="sec-hdr">
+    <div class="sec-title">🤖 This Week's AI Picks</div>
+    <div class="sec-sub" id="recoMeta">AI-curated stocks buzzing on social media — with price targets &amp; verdicts.</div>
+    <button class="btn btn-amber" id="btnRefresh" onclick="fetchRecs(true)">⟳ Refresh</button>
+  </div>
+  <div class="cards-grid" id="recoGrid">
+    <div class="skeleton pulsing">Loading…</div>
+    <div class="skeleton pulsing" style="animation-delay:.2s"></div>
+    <div class="skeleton pulsing" style="animation-delay:.4s"></div>
+    <div class="skeleton pulsing" style="animation-delay:.6s"></div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Add My Find ── -->
+  <div class="add-card">
+    <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4a5568;margin-bottom:14px">+ Add New Find</div>
+    <div class="form-row">
+      <div class="form-field"><label class="form-label">Ticker</label><input id="fTicker" style="width:90px;text-transform:uppercase" placeholder="AAPL" maxlength="12"></div>
+      <div class="form-field" style="flex:1"><label class="form-label">Name (optional)</label><input id="fName" placeholder="Apple Inc."></div>
+      <div class="form-field"><label class="form-label">Source</label>
+        <select id="fSource"><option>Reddit</option><option>Twitter/X</option><option>StockTwits</option><option>YouTube</option><option>Newsletter</option><option>Discord</option><option>TikTok</option><option>Manual</option></select></div>
+      <div class="form-field"><label class="form-label">Category</label>
+        <select id="fCategory"><option>Stock</option><option>ETF</option><option>Crypto</option><option>Option Play</option><option>Sector Theme</option></select></div>
+      <div class="form-field"><label class="form-label">Sentiment</label>
+        <select id="fSentiment"><option>Bullish</option><option>Neutral</option><option>Bearish</option><option>Watching</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="flex:1"><label class="form-label">Why it's interesting</label>
+        <textarea id="fWhy" rows="2" placeholder="Catalyst, thesis, what the community is saying…"></textarea></div>
+      <div class="form-field" style="flex:1"><label class="form-label">Link (optional)</label><input id="fLink" placeholder="https://…"></div>
+    </div>
+    <button class="btn btn-amber" onclick="addFind()">+ Add Find</button>
+    <div class="form-msg" id="addMsg"></div>
+  </div>
+
+  <!-- ── My Finds ── -->
+  <div class="sec-hdr">
+    <div class="sec-title">📋 My Finds</div>
+    <div class="sec-sub" id="findsCount"></div>
+  </div>
+  <div class="toolbar">
+    <select id="filterWeek" onchange="loadFinds()"><option value="">All weeks</option></select>
+    <select id="filterStatus" onchange="loadFinds()">
+      <option value="">All</option><option value="watching">Watching</option>
+      <option value="added_to_watchlist">Added to Watchlist</option><option value="passed">Passed</option>
+    </select>
+    <span class="count-badge" id="countBadge">0 finds</span>
+  </div>
+  <div id="findsContainer"><div class="empty">Loading…</div></div>
+
+</div>
+
+<script>
+// ─── Globals ──────────────────────────────────────────────────────────────────
+var RECO_ITEMS  = [];   // store reco items by index — avoids inline-string escaping
+var MY_FINDS    = [];
+var pollTimer   = null;
+
+// ─── Reco fetch ───────────────────────────────────────────────────────────────
+function fetchRecs(force) {
+  var btn = document.getElementById('btnRefresh');
+  btn.disabled = true; btn.textContent = '…';
+  setSkeletons('Asking DeepSeek AI…');
+
+  var url = '/api/new-finds/recommendations' + (force ? '?force=true' : '');
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data.ok) { showRecoError(data.error || 'Unknown error'); btn.disabled=false; btn.textContent='⟳ Refresh'; return; }
+      if (data.status === 'generating') {
+        document.getElementById('recoMeta').textContent = 'DeepSeek is picking top stocks — usually 5–15 seconds…';
+        startPoll();
+        return;
+      }
+      renderRecs(data);
+      btn.disabled=false; btn.textContent='⟳ Refresh';
+    })
+    .catch(function(e){ showRecoError(String(e)); btn.disabled=false; btn.textContent='⟳ Refresh'; });
+}
+
+function startPoll() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(function(){
+    fetch('/api/new-finds/recommendations/status')
+      .then(function(r){ return r.json(); })
+      .then(function(s){
+        if (s.error) {
+          clearInterval(pollTimer);
+          showRecoError(s.error);
+          document.getElementById('btnRefresh').disabled=false;
+          document.getElementById('btnRefresh').textContent='⟳ Refresh';
+          return;
+        }
+        if (!s.running && s.has_results) {
+          clearInterval(pollTimer);
+          fetch('/api/new-finds/recommendations')
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              renderRecs(data);
+              document.getElementById('btnRefresh').disabled=false;
+              document.getElementById('btnRefresh').textContent='⟳ Refresh';
+            })
+            .catch(function(e){ showRecoError(String(e)); });
+        }
+      })
+      .catch(function(){});  // keep polling on network hiccup
+  }, 3000);
+}
+
+function setSkeletons(msg) {
+  var g = document.getElementById('recoGrid');
+  g.innerHTML = '';
+  [0,200,400,600].forEach(function(d){
+    var el = document.createElement('div');
+    el.className = 'skeleton pulsing';
+    el.style.animationDelay = d + 'ms';
+    el.textContent = msg || '';
+    g.appendChild(el);
+  });
+}
+
+function showRecoError(msg) {
+  var g = document.getElementById('recoGrid');
+  g.innerHTML = '';
+  var el = document.createElement('div');
+  el.className = 'skeleton';
+  el.style.color = '#f04040';
+  el.textContent = 'Error: ' + msg;
+  g.appendChild(el);
+}
+
+function renderRecs(data) {
+  var grid = document.getElementById('recoGrid');
+  var meta = document.getElementById('recoMeta');
+  RECO_ITEMS = data.items || [];
+
+  if (!RECO_ITEMS.length) {
+    grid.innerHTML = '';
+    var el = document.createElement('div');
+    el.className = 'skeleton';
+    el.textContent = 'No recommendations. Click Refresh to try again.';
+    grid.appendChild(el);
+    return;
+  }
+
+  var when = data.generated_at ? new Date(data.generated_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '';
+  meta.textContent = (data.from_cache ? 'Cached' : 'Fresh') + ' DeepSeek picks · ' + when + ' · refreshes hourly';
+
+  grid.innerHTML = '';
+  RECO_ITEMS.forEach(function(item, idx){
+    try {
+      grid.appendChild(buildRecoCard(item, idx));
+    } catch(err) {
+      var errEl = document.createElement('div');
+      errEl.className = 'skeleton';
+      errEl.style.color = '#f04040';
+      errEl.textContent = 'Card error (' + (item.ticker||'?') + '): ' + err.message;
+      grid.appendChild(errEl);
+    }
+  });
+}
+
+// ─── Build reco card using DOM (no innerHTML with user data) ──────────────────
+function buildRecoCard(item, idx) {
+  var ai  = item.ai_analysis || {};
+  var mkt = ai._market || {};
+  var v   = ai.verdict || 'WATCH';
+
+  var VICON = {STRONG_BUY:'🚀', BUY_DIP:'📈', WATCH:'👀', AVOID:'🚫'};
+  var VCOL  = {STRONG_BUY:'#00d68f', BUY_DIP:'#34d399', WATCH:'#f59e0b', AVOID:'#f04040'};
+  var SCOL  = {Bullish:'#00d68f', Neutral:'#94a3b8', Bearish:'#f04040', Watching:'#f59e0b'};
+
+  var vc = VCOL[v] || '#f59e0b';
+
+  var card = el('div', {className:'rcard', style:'border-left:3px solid '+vc});
+
+  // Top row: ticker + price
+  var top = el('div', {className:'rcard-top'});
+  var tBlock = el('div');
+  var tLink = el('a', {className:'rcard-ticker', href:'https://www.tradingview.com/symbols/'+item.ticker+'/', target:'_blank'});
+  tLink.textContent = item.ticker || '';
+  tBlock.appendChild(tLink);
+  if (item.name) { var nm = el('div',{className:'rcard-name'}); nm.textContent = item.name; tBlock.appendChild(nm); }
+  top.appendChild(tBlock);
+
+  if (mkt.price) {
+    var pBlock = el('div', {className:'rcard-price'});
+    var pVal = el('div',{className:'rcard-price-val'}); pVal.textContent = '$' + fmt(mkt.price);
+    pBlock.appendChild(pVal);
+    if (mkt.change_pct != null) {
+      var pChg = el('div',{className:'rcard-price-chg', style:'color:' + (mkt.change_pct>=0?'#00d68f':'#f04040')});
+      pChg.textContent = (mkt.change_pct>=0?'+':'') + fmt(mkt.change_pct) + '%';
+      pBlock.appendChild(pChg);
+    }
+    top.appendChild(pBlock);
+  }
+  card.appendChild(top);
+
+  // Badges
+  var badges = el('div',{className:'badges'});
+  addBadge(badges, (VICON[v]||'') + ' ' + v.replace('_',' '), 'badge verdict-'+v);
+  addBadge(badges, item.source, 'badge badge-source');
+  addBadge(badges, item.category, 'badge badge-category');
+  if (item.sentiment) {
+    var sBadge = el('span',{style:'color:'+((SCOL[item.sentiment])||'#94a3b8')+';font-size:.78rem;font-weight:600'});
+    sBadge.textContent = item.sentiment;
+    badges.appendChild(sBadge);
+  }
+  card.appendChild(badges);
+
+  // Verdict reason
+  if (ai.verdict_reason) { var vr = el('div',{className:'rcard-reason'}); vr.textContent = ai.verdict_reason; card.appendChild(vr); }
+
+  // Catalyst
+  if (item.catalyst) { var cat = el('div',{className:'rcard-catalyst'}); cat.textContent = '⚡ ' + item.catalyst; card.appendChild(cat); }
+
+  // Targets
+  var tBoxes = [];
+  if (ai.price_30d_target) tBoxes.push(targetBox('30-Day Target', ai.price_30d_target, ai.upside_pct_30d));
+  if (ai.price_90d_target) tBoxes.push(targetBox('90-Day Target', ai.price_90d_target, ai.upside_pct_90d));
+  if (ai.entry_zone)       tBoxes.push(textBox('Entry Zone', ai.entry_zone, '#f59e0b'));
+  if (ai.risk_reward_ratio) tBoxes.push(textBox('R:R', fmt(ai.risk_reward_ratio)+'x', '#e2e8f4'));
+  if (tBoxes.length) {
+    var tRow = el('div',{className:'targets'});
+    tBoxes.forEach(function(b){ tRow.appendChild(b); });
+    card.appendChild(tRow);
+  }
+
+  // Bull / Bear
+  var bulls = ai.bull_case || [];
+  var bears = ai.bear_case || [];
+  if (bulls.length || bears.length) {
+    var cases = el('div',{className:'cases'});
+    cases.appendChild(caseBox('▲ Bull', '#00d68f', bulls.slice(0,2)));
+    cases.appendChild(caseBox('▼ Bear', '#f04040', bears.slice(0,2)));
+    card.appendChild(cases);
+  }
+
+  // Confidence
+  var conf = ai.confidence || 0;
+  var confC = conf>=7?'#00d68f':conf>=5?'#f59e0b':'#f04040';
+  var confRow = el('div');
+  var cr = el('div',{className:'conf-row'});
+  var cl = el('span',{style:'font-size:.68rem;color:#4a5568;white-space:nowrap'}); cl.textContent = 'AI Confidence';
+  var cbg = el('div',{className:'conf-bar-bg'});
+  var cfill = el('div',{className:'conf-bar-fill', style:'width:'+conf*10+'%;background:'+confC});
+  cbg.appendChild(cfill);
+  var cnum = el('span',{className:'conf-num', style:'color:'+confC}); cnum.textContent = conf;
+  var cden = el('span',{className:'conf-denom'}); cden.textContent = '/10';
+  cnum.appendChild(cden);
+  cr.appendChild(cl); cr.appendChild(cbg); cr.appendChild(cnum);
+  confRow.appendChild(cr);
+  if (ai.hype_assessment) { var hn = el('div',{className:'hype-note'}); hn.textContent = (ai.social_hype_real?'🔥':'❌') + ' ' + ai.hype_assessment; confRow.appendChild(hn); }
+  card.appendChild(confRow);
+
+  // Add to My Finds button
+  var addBtn = el('button',{className:'add-btn'});
+  addBtn.textContent = '+ Add to My Finds';
+  addBtn.addEventListener('click', function(){ addRecoToMyFinds(idx, addBtn); });
+  card.appendChild(addBtn);
+
+  return card;
+}
+
+// ─── DOM helpers ──────────────────────────────────────────────────────────────
+function el(tag, props) {
+  var e = document.createElement(tag);
+  if (props) Object.assign(e, props);
+  return e;
+}
+function addBadge(parent, text, cls) {
+  if (!text) return;
+  var b = document.createElement('span');
+  b.className = cls;
+  b.textContent = text;
+  parent.appendChild(b);
+}
+function targetBox(label, price, upside) {
+  var box = el('div',{className:'target-box'});
+  var lbl = el('div',{className:'tb-lbl'}); lbl.textContent = label; box.appendChild(lbl);
+  var val = el('div',{className:'tb-val'}); val.textContent = '$'+fmt(price); box.appendChild(val);
+  if (upside != null) {
+    var sub = el('div',{className:'tb-sub', style:'color:'+(upside>=0?'#00d68f':'#f04040')});
+    sub.textContent = (upside>=0?'+':'')+fmt(upside)+'%';
+    box.appendChild(sub);
+  }
+  return box;
+}
+function textBox(label, text, color) {
+  var box = el('div',{className:'target-box'});
+  var lbl = el('div',{className:'tb-lbl'}); lbl.textContent = label; box.appendChild(lbl);
+  var val = el('div',{className:'tb-val', style:'color:'+color+';font-size:.82rem'}); val.textContent = text; box.appendChild(val);
+  return box;
+}
+function caseBox(title, color, items) {
+  var box = el('div',{className:'case-box'});
+  var lbl = el('div',{className:'case-lbl', style:'color:'+color}); lbl.textContent = title; box.appendChild(lbl);
+  var ul = document.createElement('ul');
+  if (!items.length) { var li = document.createElement('li'); li.textContent = 'N/A'; ul.appendChild(li); }
+  items.forEach(function(t){ var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+  box.appendChild(ul);
+  return box;
+}
+function fmt(n, d) { d = d||2; return n!=null ? Number(n).toFixed(d) : '—'; }
+
+// ─── Add reco to My Finds ─────────────────────────────────────────────────────
+function addRecoToMyFinds(idx, btn) {
+  var item = RECO_ITEMS[idx];
+  if (!item) return;
+  btn.disabled = true; btn.textContent = 'Adding…';
+  fetch('/api/new-finds', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ticker:item.ticker, name:item.name||'', source:item.source||'',
+      category:item.category||'Stock', sentiment:item.sentiment||'Watching',
+      why:item.why||'', week_of:''})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) { btn.textContent='✓ Added'; btn.style.color='#00d68f'; btn.style.borderColor='#00d68f44'; loadFinds(); loadWeeks(); }
+    else { btn.disabled=false; btn.textContent='Error — retry'; }
+  })
+  .catch(function(){ btn.disabled=false; btn.textContent='Error'; });
+}
+
+// ─── My Finds ─────────────────────────────────────────────────────────────────
+function loadWeeks() {
+  fetch('/api/new-finds/weeks')
+    .then(function(r){ return r.json(); })
+    .then(function(weeks){
+      var sel = document.getElementById('filterWeek');
+      var cur = sel.value;
+      while (sel.options.length > 1) sel.remove(1);
+      weeks.forEach(function(w){
+        var o = document.createElement('option');
+        o.value = w; o.textContent = w;
+        if (w===cur) o.selected = true;
+        sel.appendChild(o);
+      });
+    });
+}
+
+function loadFinds() {
+  var week   = document.getElementById('filterWeek').value;
+  var status = document.getElementById('filterStatus').value;
+  var params = new URLSearchParams();
+  if (week) params.set('week', week);
+  if (status) params.set('status', status);
+  fetch('/api/new-finds?' + params)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      MY_FINDS = data;
+      document.getElementById('countBadge').textContent = data.length + ' find' + (data.length!==1?'s':'');
+      document.getElementById('findsCount').textContent = data.length + ' entries';
+      renderFinds(data);
+    });
+}
+
+function renderFinds(finds) {
+  var c = document.getElementById('findsContainer');
+  if (!finds.length) { c.innerHTML = '<div class="empty">No finds yet — add your first one above.</div>'; return; }
+
+  // Group by week
+  var byWeek = {};
+  finds.forEach(function(f){ var w=f.week_of||'Unknown'; if(!byWeek[w]) byWeek[w]=[]; byWeek[w].push(f); });
+
+  c.innerHTML = '';
+  Object.keys(byWeek).sort().reverse().forEach(function(week){
+    var sec = document.createElement('div');
+    sec.style.marginBottom = '24px';
+    var lbl = el('div',{className:'week-lbl'}); lbl.textContent = '📅 ' + week;
+    var grid = el('div',{className:'finds-grid'});
+    byWeek[week].forEach(function(f){ grid.appendChild(buildFindCard(f)); });
+    sec.appendChild(lbl); sec.appendChild(grid);
+    c.appendChild(sec);
+  });
+}
+
+var SCLS = {Bullish:'badge-bull', Neutral:'badge-neutral', Bearish:'badge-bear', Watching:'badge-watch2'};
+
+function buildFindCard(f) {
+  var card = el('div',{className:'find-card status-'+f.status});
+  card.id = 'fcard-' + f.id;
+
+  var top = el('div',{className:'fc-top'});
+  var tv = el('a',{className:'fc-ticker', href:'https://www.tradingview.com/symbols/'+(f.ticker||'').replace('.','-')+'/', target:'_blank'});
+  tv.textContent = f.ticker||'';
+  var info = el('div');
+  info.appendChild(tv);
+  if (f.name) { var nm=el('div',{className:'fc-name'}); nm.textContent=f.name; info.appendChild(nm); }
+  top.appendChild(info);
+  var sp = el('div',{className:'fc-spacer'});
+  top.appendChild(sp);
+  var badges = el('div',{className:'badges'});
+  addBadge(badges, f.source, 'badge badge-source');
+  addBadge(badges, f.category, 'badge badge-category');
+  addBadge(badges, f.sentiment, 'badge '+(SCLS[f.sentiment]||'badge-neutral'));
+  top.appendChild(badges);
+  card.appendChild(top);
+
+  if (f.why) { var why=el('div',{className:'fc-why'}); why.textContent=f.why; card.appendChild(why); }
+  if (f.link) {
+    var lk=el('a',{className:'fc-link', href:f.link, target:'_blank'});
+    lk.textContent = f.link.length>60 ? f.link.slice(0,60)+'…' : f.link;
+    card.appendChild(lk);
+  }
+
+  var bot = el('div',{className:'fc-bottom'});
+  var dt = el('span',{className:'fc-date'});
+  dt.textContent = f.created_at ? new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  bot.appendChild(dt);
+  var acts = el('div',{className:'fc-actions'});
+  var sel = el('select',{className:'status-sel'});
+  [['watching','Watching'],['added_to_watchlist','✓ Watchlist'],['passed','Pass']].forEach(function(opt){
+    var o=document.createElement('option'); o.value=opt[0]; o.textContent=opt[1];
+    if(f.status===opt[0]) o.selected=true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', function(){ setFindStatus(f.id, sel.value); });
+  var dBtn = el('button',{className:'del-btn'}); dBtn.textContent='✕';
+  dBtn.addEventListener('click', function(){ delFind(f.id); });
+  acts.appendChild(sel); acts.appendChild(dBtn);
+  bot.appendChild(acts);
+  card.appendChild(bot);
+
+  return card;
+}
+
+function addFind() {
+  var ticker = document.getElementById('fTicker').value.trim().toUpperCase();
+  var msg    = document.getElementById('addMsg');
+  if (!ticker) { msg.textContent='Ticker is required.'; return; }
+  msg.textContent = 'Adding…';
+  fetch('/api/new-finds', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      ticker:    ticker,
+      name:      document.getElementById('fName').value.trim(),
+      source:    document.getElementById('fSource').value,
+      category:  document.getElementById('fCategory').value,
+      sentiment: document.getElementById('fSentiment').value,
+      why:       document.getElementById('fWhy').value.trim(),
+      link:      document.getElementById('fLink').value.trim(),
+      week_of:   ''
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    msg.textContent = d.ok ? ticker+' added.' : (d.error||'Error');
+    if (d.ok) { document.getElementById('fTicker').value=''; document.getElementById('fWhy').value=''; document.getElementById('fLink').value=''; loadFinds(); loadWeeks(); }
+  });
+}
+
+function setFindStatus(id, status) {
+  fetch('/api/new-finds/'+id+'/status', {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:status})});
+  var card = document.getElementById('fcard-'+id);
+  if (card) { card.className = 'find-card status-'+status; }
+}
+
+function delFind(id) {
+  if (!confirm('Remove this find?')) return;
+  fetch('/api/new-finds/'+id, {method:'DELETE'})
+    .then(function(){ document.getElementById('fcard-'+id)?.remove(); loadFinds(); });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadWeeks();
+loadFinds();
+fetchRecs(false);
+</script>
+</body>
+</html>

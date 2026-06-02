@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes · AlphaTerminal</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e2e8f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: #161b22; border-bottom: 1px solid #21262d;
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; gap: 16px;
+}
+.header-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f4; }
+.header-spacer { flex: 1; }
+.nav-link {
+  color: #7a8499; font-size: 0.82rem; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px; transition: color .15s, background .15s;
+}
+.nav-link:hover { color: #e2e8f4; background: #1e2536; }
+.nav-link.active { color: #00d68f; }
+
+.main { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+.section-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5568; margin-bottom: 14px; }
+
+.add-form {
+  background: #161b22; border: 1px solid #21262d; border-radius: 10px;
+  padding: 18px 20px; margin-bottom: 28px;
+  display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+}
+.add-form input, .add-form textarea {
+  background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+  color: #e2e8f4; font-size: 0.88rem; padding: 8px 12px;
+  outline: none; transition: border-color .15s;
+}
+.add-form input:focus, .add-form textarea:focus { border-color: #00d68f44; }
+.add-form .ticker-input { width: 100px; text-transform: uppercase; }
+.add-form .note-input { flex: 1; min-width: 220px; resize: vertical; min-height: 36px; }
+.btn-add {
+  background: #00d68f18; color: #00d68f; border: 1px solid #00d68f44;
+  border-radius: 6px; padding: 8px 18px; font-size: 0.83rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: background .15s;
+}
+.btn-add:hover { background: #00d68f30; }
+.msg { font-size: 0.8rem; color: #7a8499; padding: 4px 0; width: 100%; }
+
+table.notes-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+table.notes-table th {
+  background: #161b22; color: #4a5568; padding: 9px 12px;
+  border-bottom: 1px solid #21262d; text-align: left;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+}
+table.notes-table td {
+  background: #0d1117; color: #e2e8f4; padding: 10px 12px;
+  border-bottom: 1px solid #161b22; vertical-align: middle;
+}
+table.notes-table tr:hover td { background: #13181f; }
+.ticker-cell { color: #00d68f; font-weight: 700; white-space: nowrap; }
+.date-cell { color: #4a5568; font-size: 0.75rem; white-space: nowrap; }
+.btn-del {
+  background: #2b0d0d; color: #f04040; border: 1px solid #f0404044;
+  border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;
+  font-weight: 600;
+}
+.btn-del:hover { background: #3d1010; }
+.empty { color: #4a5568; padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-title">AlphaTerminal</span>
+  <div style="width:1px;height:24px;background:#21262d;"></div>
+  <a href="/" class="nav-link">Dashboard</a>
+  <a href="/alerts" class="nav-link">Alerts</a>
+  <a href="/trades" class="nav-link">Trades</a>
+  <a href="/notes" class="nav-link active">Notes</a>
+  <a href="/watchlist" class="nav-link">Watchlist</a>
+  <a href="/new-finds" class="nav-link">New Finds</a>
+  <div class="header-spacer"></div>
+</div>
+
+<div class="main">
+  <div class="section-title">Add Note</div>
+  <div class="add-form">
+    <input id="tickerIn" class="ticker-input" placeholder="TICKER (opt)" maxlength="12">
+    <textarea id="noteIn" class="note-input" placeholder="Note text…" rows="2"></textarea>
+    <button class="btn-add" onclick="addNote()">+ Add Note</button>
+    <div id="addMsg" class="msg"></div>
+  </div>
+
+  <div class="section-title">All Notes</div>
+  <div id="notesContainer"><div class="empty">Loading…</div></div>
+</div>
+
+<script>
+async function loadNotes() {
+  const res  = await fetch("/api/notes");
+  const data = await res.json();
+  const container = document.getElementById("notesContainer");
+  if (!data.length) {
+    container.innerHTML = "<div class='empty'>No notes yet. Add one above.</div>";
+    return;
+  }
+  const rows = data.map(n => {
+    const dt  = new Date(n.created_at).toLocaleString("en-US", {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+    const tick = n.ticker || "—";
+    return `<tr>
+      <td class="date-cell">${dt}</td>
+      <td class="ticker-cell">${tick}</td>
+      <td>${escHtml(n.note)}</td>
+      <td><button class="btn-del" onclick="deleteNote('${n.id}')">✕ Delete</button></td>
+    </tr>`;
+  }).join("");
+  container.innerHTML = `<table class="notes-table">
+    <thead><tr><th>DATE</th><th>TICKER</th><th>NOTE</th><th>ACTION</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+async function addNote() {
+  const ticker = document.getElementById("tickerIn").value.trim().toUpperCase();
+  const note   = document.getElementById("noteIn").value.trim();
+  const msg    = document.getElementById("addMsg");
+  if (!note) { msg.textContent = "Note text is required."; return; }
+  const res  = await fetch("/api/notes", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ticker, note}),
+  });
+  const data = await res.json();
+  msg.textContent = data.message || data.error || "";
+  if (data.ok) {
+    document.getElementById("tickerIn").value = "";
+    document.getElementById("noteIn").value   = "";
+    loadNotes();
+  }
+}
+
+async function deleteNote(id) {
+  if (!confirm("Delete this note?")) return;
+  await fetch(`/api/notes/${id}`, {method:"DELETE"});
+  loadNotes();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+loadNotes();
+</script>
+</body>
+</html>

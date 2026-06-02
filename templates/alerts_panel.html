@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alerts — Trade Queue · AlphaTerminal</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e2e8f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+
+/* ── Header ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: #161b22; border-bottom: 1px solid #21262d;
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; gap: 16px;
+}
+.header-title { font-size: 1.05rem; font-weight: 700; color: #e2e8f4; white-space: nowrap; }
+.header-sep { width: 1px; height: 24px; background: #21262d; flex-shrink: 0; }
+.fg-badge {
+  display: flex; align-items: center; gap: 7px;
+  background: #1e2536; border: 1px solid #2a3347;
+  border-radius: 20px; padding: 4px 12px;
+  font-size: 0.8rem; color: #94a3b8; white-space: nowrap;
+}
+.fg-badge b { color: #e2e8f4; }
+.fg-dot { width: 7px; height: 7px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+.header-spacer { flex: 1; }
+
+/* Auto-trade toggle */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.toggle-wrap span { font-size: 0.8rem; color: #7a8499; }
+.toggle-wrap .label { color: #94a3b8; }
+.switch { position: relative; width: 36px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; inset: 0; cursor: pointer;
+  background: #21262d; border-radius: 20px; transition: 0.25s;
+}
+.slider::before {
+  content: ''; position: absolute;
+  width: 14px; height: 14px; left: 3px; top: 3px;
+  background: #fff; border-radius: 50%; transition: 0.25s;
+}
+input:checked + .slider { background: #1D9E75; }
+input:checked + .slider::before { transform: translateX(16px); }
+
+/* Header buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px; font-size: 0.82rem;
+  font-weight: 600; cursor: pointer; border: none; transition: 0.15s; white-space: nowrap;
+}
+.btn-secondary { background: #1e2536; color: #94a3b8; border: 1px solid #2a3347; }
+.btn-secondary:hover { background: #252f44; color: #e2e8f4; }
+.btn-primary { background: #1D9E75; color: #fff; }
+.btn-primary:hover { background: #178a63; }
+.btn-danger { background: #2b0d0d; color: #f04040; border: 1px solid #f0404033; }
+.btn-danger:hover { background: #3d1111; }
+.btn-ghost { background: transparent; color: #7a8499; border: 1px solid #21262d; }
+.btn-ghost:hover { background: #161b22; color: #e2e8f4; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; }
+
+/* ── Main content ── */
+.main { max-width: 1400px; margin: 0 auto; padding: 20px 20px 60px; }
+
+/* ── Group card ── */
+.group-card {
+  background: #161b22; border: 1px solid #21262d;
+  border-radius: 14px; margin-bottom: 16px; overflow: hidden;
+}
+.group-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; cursor: pointer; user-select: none;
+  border-bottom: 1px solid #21262d;
+}
+.group-header:hover { background: #1a2030; }
+.group-icon { color: #4a5568; font-size: 1rem; flex-shrink: 0; }
+.group-name { font-weight: 700; font-size: 0.92rem; color: #e2e8f4; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+.badge-count { background: #1e2536; color: #7a8499; border: 1px solid #2a3347; }
+.badge-new   { background: #0d2b4a; color: #60a5fa; border: 1px solid #3b82f633; }
+.group-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.chevron { color: #4a5568; font-size: 0.75rem; transition: transform 0.2s; margin-left: 2px; }
+.chevron.open { transform: rotate(180deg); }
+
+/* ── Table ── */
+.group-body { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: #0f131a; color: #4a5568; padding: 8px 12px;
+  text-align: left; font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border-bottom: 1px solid #21262d; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #21262d; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover td { background: #1a2030; }
+tbody td { padding: 11px 12px; vertical-align: middle; }
+
+/* ── Ticker cell ── */
+.ticker-sym { font-weight: 700; font-size: 0.9rem; color: #e2e8f4; }
+.ticker-sym a { color: #e2e8f4; }
+.ticker-sym a:hover { color: #1D9E75; }
+.ticker-exp { font-size: 0.72rem; color: #4a5568; margin-top: 2px; }
+.badge-ticker-new {
+  display: inline-block; margin-left: 5px;
+  background: #1a3a6a; color: #93c5fd; border: 1px solid #3b82f633;
+  border-radius: 10px; padding: 1px 6px; font-size: 0.65rem; font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ── Price cell ── */
+.price-val  { font-weight: 600; color: #e2e8f4; }
+.price-chg  { font-size: 0.75rem; margin-top: 2px; }
+.pos { color: #1D9E75; }
+.neg { color: #f04040; }
+
+/* ── Recommendation badge ── */
+.rec-badge {
+  display: inline-block; padding: 4px 10px; border-radius: 6px;
+  font-size: 0.76rem; font-weight: 700; white-space: nowrap;
+}
+.rec-strong-buy  { background: #0a3d2e; color: #34d399; border: 1px solid #1D9E7544; }
+.rec-buy         { background: #0e3320; color: #6ee7b7; border: 1px solid #1D9E7533; }
+.rec-hold        { background: #3d2800; color: #fbbf24; border: 1px solid #d9770633; }
+.rec-sell        { background: #3d0e0e; color: #f87171; border: 1px solid #dc262633; }
+.rec-strong-sell { background: #2d0808; color: #ef4444; border: 1px solid #99191933; }
+.rec-none        { background: #1e2536; color: #4a5568; border: 1px solid #2a3347; }
+
+/* ── Confidence bar ── */
+.conf-cell { display: flex; align-items: center; gap: 7px; }
+.conf-track {
+  flex-shrink: 0; width: 52px; height: 4px;
+  background: #21262d; border-radius: 3px; overflow: hidden;
+}
+.conf-fill  { height: 100%; border-radius: 3px; }
+.conf-score { font-size: 0.78rem; color: #94a3b8; white-space: nowrap; }
+
+/* ── Status ── */
+.status-cell { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.status-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-label { font-size: 0.78rem; color: #7a8499; }
+
+/* ── Action buttons cell ── */
+.action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.done-link { font-size: 0.78rem; color: #1D9E75; }
+.done-link:hover { text-decoration: underline; }
+
+/* ── Loading / empty states ── */
+.loading-wrap {
+  text-align: center; padding: 60px 20px; color: #4a5568;
+}
+.spinner {
+  width: 32px; height: 32px; border: 3px solid #21262d;
+  border-top-color: #1D9E75; border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-msg { color: #4a5568; padding: 32px 18px; text-align: center; font-size: 0.88rem; }
+
+/* ── Toast ── */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: #1e2536; border: 1px solid #2a3347; border-radius: 10px;
+  padding: 10px 16px; font-size: 0.83rem; color: #e2e8f4;
+  max-width: 320px; box-shadow: 0 4px 20px #0008;
+  opacity: 0; transform: translateY(8px); transition: 0.25s;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-left: 3px solid #1D9E75; }
+.toast.error   { border-left: 3px solid #f04040; }
+.toast.info    { border-left: 3px solid #60a5fa; }
+
+/* ── Mobile ── */
+@media (max-width: 700px) {
+  .header { padding: 0 12px; gap: 8px; }
+  .header-title { font-size: 0.9rem; }
+  .toggle-wrap .label { display: none; }
+  .main { padding: 12px 10px 60px; }
+  .group-header { padding: 12px; flex-wrap: wrap; }
+  .group-actions { width: 100%; margin-top: 8px; }
+  thead th:nth-child(n+5) { display: none; }
+  tbody td:nth-child(n+5) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-title">Alerts — trade queue</div>
+  <div class="header-sep"></div>
+  <div class="fg-badge">
+    <span class="fg-dot" id="fg-dot"></span>
+    <b id="fg-value">—</b>
+    <span id="fg-label">Loading…</span>
+  </div>
+  <div class="header-spacer"></div>
+  <label class="toggle-wrap">
+    <span class="label">Auto-trade new tickers</span>
+    <label class="switch">
+      <input type="checkbox" id="auto-trade-toggle">
+      <span class="slider"></span>
+    </label>
+    <span id="auto-trade-label">Off</span>
+  </label>
+  <div class="header-sep"></div>
+  <button class="btn btn-secondary" id="fetch-analyst-btn" onclick="fetchMissingAnalyst()">🔍 Fetch analyst</button>
+  <button class="btn btn-secondary" onclick="fetchAlerts()">⟳ Fetch alerts</button>
+  <button class="btn btn-primary"   onclick="tradeAll()">⚡ Trade all new</button>
+</header>
+
+<!-- ── Content ── -->
+<main class="main">
+  <div id="groups-container">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div>Loading alerts &amp; analyst data…</div>
+      <div style="font-size:0.78rem;color:#2a3347;margin-top:6px;">This may take a moment on first load.</div>
+    </div>
+  </div>
+</main>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let autoTradeEnabled = localStorage.getItem('autoTradeEnabled') === 'true';
+let _allGroups = [];
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore toggle
+  const toggle = document.getElementById('auto-trade-toggle');
+  toggle.checked = autoTradeEnabled;
+  updateToggleLabel();
+  toggle.addEventListener('change', onToggleChange);
+
+  loadAll();
+});
+
+async function loadAll() {
+  await Promise.all([loadFearGreed(), loadAlerts()]);
+}
+
+// ── Fear & Greed ─────────────────────────────────────────────────────────────
+async function loadFearGreed() {
+  try {
+    const r = await fetch('/api/fear_greed');
+    const d = await r.json();
+    document.getElementById('fg-value').textContent = d.value + ' —';
+    document.getElementById('fg-label').textContent = d.label;
+    const dot = document.getElementById('fg-dot');
+    const v = parseInt(d.value) || 50;
+    dot.style.background = v >= 60 ? '#1D9E75' : v >= 40 ? '#d97706' : '#f04040';
+  } catch(e) {
+    document.getElementById('fg-label').textContent = 'Unavailable';
+  }
+}
+
+// ── Load & render alerts ─────────────────────────────────────────────────────
+async function loadAlerts() {
+  try {
+    const r = await fetch('/api/alerts');
+    const d = await r.json();
+    _allGroups = d.groups;
+    renderGroups(d.groups);
+    checkAnalystStatus();   // update button label with missing count
+  } catch(e) {
+    document.getElementById('groups-container').innerHTML =
+      `<div class="empty-msg">Failed to load alerts: ${e.message}</div>`;
+  }
+}
+
+function renderGroups(groups) {
+  const el = document.getElementById('groups-container');
+  if (!groups || groups.length === 0) {
+    el.innerHTML = `<div class="empty-msg">No active alerts. Click <b>Fetch alerts</b> to pull from Fastmail.</div>`;
+    return;
+  }
+  el.innerHTML = groups.map(renderGroup).join('');
+}
+
+function renderGroup(g) {
+  const hasNew      = g.new_count > 0;
+  const defaultOpen = hasNew;
+  const newBadge    = g.new_count > 0
+    ? `<span class="badge badge-new">${g.new_count} new</span>`
+    : '';
+  const bodyDisplay = defaultOpen ? '' : 'display:none';
+
+  const rows = g.alerts.map(a => renderRow(a, g.group_name)).join('');
+
+  return `
+<div class="group-card" id="group-${esc(g.group_name)}">
+  <div class="group-header" onclick="toggleGroup('${esc(g.group_name)}')">
+    <span class="group-icon">🔔</span>
+    <span class="group-name">${esc(g.group_name)}</span>
+    <span class="badge badge-count">${g.total_count} symbol${g.total_count !== 1 ? 's' : ''}</span>
+    ${newBadge}
+    <span class="chevron ${defaultOpen ? 'open' : ''}" id="chev-${esc(g.group_name)}">▼</span>
+    <div class="group-actions" onclick="event.stopPropagation()">
+      <button class="btn btn-ghost btn-sm"
+        onclick="toggleGroup('${esc(g.group_name)}')">View all</button>
+      <button class="btn btn-primary btn-sm"
+        onclick="tradeGroup('${esc(g.group_name)}')">⚡ Trade group</button>
+    </div>
+  </div>
+  <div class="group-body" id="body-${esc(g.group_name)}" style="${bodyDisplay}">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Current price</th>
+          <th>Analyst target</th>
+          <th>Recommendation</th>
+          <th>Conf.</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="7" class="empty-msg">No alerts in this group.</td></tr>'}</tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function renderRow(alert, groupName) {
+  const a   = alert.analyst || {};
+  const sym = alert.symbol;
+  const tvUrl = `https://www.tradingview.com/symbols/${sym.replace('.', '-')}/`;
+
+  // Ticker cell
+  const newPill   = alert.status === 'new' ? `<span class="badge-ticker-new">new</span>` : '';
+  const expLabel  = alert.exp_date ? `<div class="ticker-exp">exp ${alert.exp_date}</div>` : '';
+  const tickerCell = `
+    <div class="ticker-sym">
+      <a href="${tvUrl}" target="_blank">${esc(sym)}</a>${newPill}
+    </div>${expLabel}`;
+
+  // Price cell
+  const price    = a.price != null ? `$${fmtNum(a.price)}` : '—';
+  const chgPct   = a.change_pct != null ? a.change_pct : null;
+  const chgClass = chgPct != null ? (chgPct >= 0 ? 'pos' : 'neg') : '';
+  const chgStr   = chgPct != null ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(1)}%` : '';
+  const priceCell = `
+    <div class="price-val">${price}</div>
+    ${chgStr ? `<div class="price-chg ${chgClass}">${chgStr}</div>` : ''}`;
+
+  // Target cell
+  const target    = a.target != null ? `$${fmtNum(a.target)}` : '—';
+  const upside    = a.target_upside_pct != null ? a.target_upside_pct : null;
+  const upClass   = upside != null ? (upside >= 0 ? 'pos' : 'neg') : '';
+  const upStr     = upside != null ? `${upside >= 0 ? '+' : ''}${upside.toFixed(1)}%` : '';
+  const targetCell = `
+    <div class="price-val">${target}</div>
+    ${upStr ? `<div class="price-chg ${upClass}">${upStr}</div>` : ''}`;
+
+  // Recommendation badge
+  const recCell = recBadge(a.recommendation || '—');
+
+  // Confidence
+  const confCell = confBar(a.confidence);
+
+  // Status + timestamps
+  const statusCell = statusDot(alert.status, alert.alert_generated, alert.traded_at);
+
+  // Actions
+  const actionCell = actionButtons(alert, groupName);
+
+  return `
+<tr id="row-${alert.id}">
+  <td>${tickerCell}</td>
+  <td>${priceCell}</td>
+  <td>${targetCell}</td>
+  <td>${recCell}</td>
+  <td>${confCell}</td>
+  <td>${statusCell}</td>
+  <td>${actionCell}</td>
+</tr>`;
+}
+
+// ── Badges & indicators ───────────────────────────────────────────────────────
+function recBadge(rec) {
+  const map = {
+    'Strong Buy':  'rec-strong-buy',
+    'Buy':         'rec-buy',
+    'Hold':        'rec-hold',
+    'Sell':        'rec-sell',
+    'Strong Sell': 'rec-strong-sell',
+  };
+  const cls = map[rec] || 'rec-none';
+  return `<span class="rec-badge ${cls}">${esc(rec)}</span>`;
+}
+
+function confBar(conf) {
+  if (conf == null) return `<span class="conf-score">—</span>`;
+  const pct   = Math.min(Math.max(conf, 0), 10) * 10;
+  const color = conf >= 7 ? '#1D9E75' : conf >= 5 ? '#d97706' : '#f04040';
+  return `
+<div class="conf-cell">
+  <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${color}"></div></div>
+  <span class="conf-score">${conf}/10</span>
+</div>`;
+}
+
+function statusDot(status, alertGenerated, tradedAt) {
+  const cfg = {
+    new:     { color: '#3b82f6', label: 'New' },
+    queued:  { color: '#f59e0b', label: 'Queued' },
+    traded:  { color: '#1D9E75', label: 'Traded' },
+    skipped: { color: '#ef4444', label: 'Skipped' },
+  };
+  const { color, label } = cfg[status] || { color: '#4a5568', label: status };
+  const ts1 = alertGenerated
+    ? `<div style="font-size:0.67rem;color:#4a5568;margin-top:3px;">Alert: ${alertGenerated}</div>`
+    : '';
+  const ts2 = tradedAt
+    ? `<div style="font-size:0.67rem;color:#1D9E75;margin-top:1px;">Traded: ${tradedAt}</div>`
+    : '';
+  return `
+<div class="status-cell" style="flex-direction:column;align-items:flex-start;gap:0;">
+  <div style="display:flex;align-items:center;gap:7px;">
+    <div class="status-dot" style="background:${color}"></div>
+    <span class="status-label">${label}</span>
+  </div>
+  ${ts1}${ts2}
+</div>`;
+}
+
+function actionButtons(alert, groupName) {
+  const s = alert.sym || alert.symbol;
+  const g = groupName;
+  const id = alert.id;
+
+  if (alert.status === 'new' || alert.status === 'queued') {
+    return `
+<div class="action-cell">
+  <button class="btn btn-primary btn-sm" onclick="tradeAlert('${id}','${esc(s)}','${esc(g)}')">Trade</button>
+  <button class="btn btn-ghost btn-sm"   onclick="skipAlert('${id}','${esc(s)}','${esc(g)}')">Skip</button>
+</div>`;
+  }
+  if (alert.status === 'traded') {
+    return `<a class="done-link" href="/trade-plans?symbol=${esc(s)}">Done — view plan →</a>`;
+  }
+  if (alert.status === 'skipped') {
+    return `<button class="btn btn-ghost btn-sm" onclick="readdAlert('${id}','${esc(s)}','${esc(g)}')">Re-add</button>`;
+  }
+  return '—';
+}
+
+// ── Toggle group collapse ─────────────────────────────────────────────────────
+function toggleGroup(groupName) {
+  const body  = document.getElementById(`body-${groupName}`);
+  const chev  = document.getElementById(`chev-${groupName}`);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  chev && chev.classList.toggle('open', !open);
+}
+
+// ── Auto-trade toggle ─────────────────────────────────────────────────────────
+function onToggleChange() {
+  const toggle = document.getElementById('auto-trade-toggle');
+  if (toggle.checked) {
+    const ok = confirm(
+      'Auto-trade is ON.\n\nNew tickers fetched from Fastmail will be queued and traded automatically.\n\nConfirm?'
+    );
+    if (!ok) {
+      toggle.checked = false;
+      return;
+    }
+    autoTradeEnabled = true;
+    showToast('Auto-trade enabled. New symbols will be traded on fetch.', 'info');
+  } else {
+    autoTradeEnabled = false;
+    showToast('Auto-trade disabled.', 'info');
+  }
+  localStorage.setItem('autoTradeEnabled', autoTradeEnabled);
+  updateToggleLabel();
+}
+
+function updateToggleLabel() {
+  document.getElementById('auto-trade-label').textContent = autoTradeEnabled ? 'On' : 'Off';
+  document.getElementById('auto-trade-label').style.color = autoTradeEnabled ? '#1D9E75' : '#7a8499';
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+async function tradeAlert(id, symbol, group) {
+  const row = document.getElementById(`row-${id}`);
+  setRowLoading(row, true);
+  const r = await apiPost('/api/alerts/trade', { symbol, group });
+  if (r.ok) {
+    showToast(`✓ Order placed: ${symbol}`, 'success');
+    await loadAlerts();
+  } else {
+    showToast(`Failed to trade ${symbol}: ${r.error || 'unknown error'}`, 'error');
+    setRowLoading(row, false);
+  }
+}
+
+async function skipAlert(id, symbol, group) {
+  const r = await apiPost('/api/alerts/skip', { symbol, group });
+  if (r.ok) {
+    showToast(`${symbol} skipped.`, 'info');
+    await loadAlerts();
+  }
+}
+
+async function readdAlert(id, symbol, group) {
+  const r = await apiPost('/api/alerts/readd', { symbol, group });
+  if (r.ok) {
+    showToast(`${symbol} re-added as new.`, 'info');
+    await loadAlerts();
+  }
+}
+
+async function tradeGroup(groupName) {
+  const g = _allGroups.find(g => g.group_name === groupName);
+  const newCount = g ? g.new_count : 0;
+  if (newCount === 0) { showToast('No new tickers in this group.', 'info'); return; }
+  if (!confirm(`Trade all ${newCount} new ticker${newCount !== 1 ? 's' : ''} in "${groupName}"?`)) return;
+
+  const card = document.getElementById(`group-${groupName}`);
+  if (card) card.style.opacity = '0.6';
+
+  const r = await apiPost('/api/alerts/trade-group', { group_name: groupName });
+  if (card) card.style.opacity = '';
+
+  if (r.ok) {
+    showToast(`✓ Traded ${r.count} ticker${r.count !== 1 ? 's' : ''} in ${groupName}`, 'success');
+    await loadAlerts();
+  } else {
+    showToast('Trade group failed.', 'error');
+  }
+}
+
+async function tradeAll() {
+  const total = _allGroups.reduce((s, g) => s + g.new_count, 0);
+  if (total === 0) { showToast('No new tickers across any group.', 'info'); return; }
+  if (!confirm(`Trade all ${total} new ticker${total !== 1 ? 's' : ''} across all groups?`)) return;
+
+  document.querySelector('.btn-primary[onclick="tradeAll()"]').disabled = true;
+  const r = await apiPost('/api/alerts/trade-all', {});
+  document.querySelector('.btn-primary[onclick="tradeAll()"]').disabled = false;
+
+  if (r.ok) {
+    showToast(`✓ ${r.count} orders placed.`, 'success');
+    await loadAlerts();
+  } else {
+    showToast('Trade-all failed.', 'error');
+  }
+}
+
+async function fetchAlerts() {
+  const btn = document.querySelector('.btn-secondary[onclick="fetchAlerts()"]');
+  btn.disabled = true;
+  btn.textContent = '⟳ Fetching…';
+
+  const r = await apiPost('/api/alerts/fetch', { auto_trade: autoTradeEnabled });
+
+  btn.disabled  = false;
+  btn.textContent = '⟳ Fetch alerts';
+
+  if (r.ok) {
+    const msg = r.message || 'Done';
+    const traded = r.auto_traded && r.auto_traded.length
+      ? ` · Auto-traded: ${r.auto_traded.join(', ')}`
+      : '';
+    showToast(msg + traded, 'success');
+    await loadAlerts();
+  } else {
+    showToast('Fetch failed.', 'error');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function apiPost(url, data) {
+  try {
+    const r = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(data),
+    });
+    return await r.json();
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function setRowLoading(row, loading) {
+  if (!row) return;
+  row.style.opacity = loading ? '0.5' : '1';
+  const btns = row.querySelectorAll('button');
+  btns.forEach(b => b.disabled = loading);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  return n >= 1000 ? n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})
+                   : n.toFixed(2);
+}
+
+// ── Fetch missing analyst data ────────────────────────────────────────────────
+let _analystPollTimer = null;
+
+async function checkAnalystStatus() {
+  try {
+    const r = await fetch('/api/alerts/analyst-status');
+    const d = await r.json();
+    const btn = document.getElementById('fetch-analyst-btn');
+    if (!btn) return;
+    if (d.running) {
+      // Was already running when page loaded — resume polling
+      _pollAnalystProgress();
+    } else if (d.missing_count > 0) {
+      btn.textContent = `🔍 Fetch analyst (${d.missing_count} missing)`;
+      btn.disabled = false;
+    } else {
+      btn.textContent = '🔍 Fetch analyst ✓';
+      btn.disabled = false;
+    }
+  } catch(_) {}
+}
+
+async function fetchMissingAnalyst() {
+  const btn = document.getElementById('fetch-analyst-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Starting…';
+
+  const r = await apiPost('/api/alerts/fetch-analyst', {});
+  if (!r.ok) {
+    showToast(r.error || 'Failed to start.', 'error');
+    btn.disabled = false;
+    btn.textContent = '🔍 Fetch analyst';
+    return;
+  }
+  if (r.count === 0) {
+    showToast('All symbols already have analyst data.', 'info');
+    btn.textContent = '🔍 Fetch analyst ✓';
+    btn.disabled = false;
+    return;
+  }
+  showToast(`Fetching for ${r.count} symbols in background…`, 'info');
+  _pollAnalystProgress();
+}
+
+function _pollAnalystProgress() {
+  clearTimeout(_analystPollTimer);
+  _analystPollTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/alerts/analyst-status');
+      const d = await r.json();
+      const btn = document.getElementById('fetch-analyst-btn');
+
+      if (d.running) {
+        const done  = d.done.length;
+        const total = done + d.pending.length + d.errors.length;
+        if (btn) btn.textContent = `⏳ ${done} / ${total}`;
+        _pollAnalystProgress();          // keep polling every 2 s
+      } else {
+        // Finished
+        const done = d.done.length;
+        const errs = d.errors.length;
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = d.missing_count > 0
+            ? `🔍 Fetch analyst (${d.missing_count} missing)`
+            : '🔍 Fetch analyst ✓';
+        }
+        showToast(
+          `Analyst fetch complete — ${done} updated${errs ? `, ${errs} error(s)` : ''}.`,
+          errs ? 'error' : 'success'
+        );
+        await loadAlerts();   // refresh table with new recommendations
+      }
+    } catch(_) {
+      _pollAnalystProgress();  // retry on network error
+    }
+  }, 2000);
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 3500);
+}
+</script>
+</body>
+</html>
