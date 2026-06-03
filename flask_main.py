@@ -27,6 +27,7 @@ from alphaterminal.new_finds import (
     get_weekly_recommendations, _current_week,
     SOURCES, CATEGORIES, SENTIMENTS,
 )
+from alphaterminal.algobot_report import get_pending_orders
 from alphaterminal.crypto import get_coins_enriched, add_coin, remove_coin
 from alphaterminal.alerts import fetch_and_store_alerts
 from alphaterminal.analysis import (
@@ -1081,6 +1082,12 @@ def api_algobot_summary(bot_key: str):
 @app.get("/api/algobot/<bot_key>/day/<date_str>")
 def api_algobot_day(bot_key: str, date_str: str):
     result = get_day_trades(bot_key, date_str)
+    return jsonify(result), (200 if result["ok"] else 400)
+
+
+@app.get("/api/algobot/orders/pending")
+def api_pending_orders():
+    result = get_pending_orders()
     return jsonify(result), (200 if result["ok"] else 400)
 
 

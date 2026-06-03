@@ -145,3 +145,80 @@ def _zero_totals() -> dict:
             "total_pnl": 0, "win_rate": 0, "max_loss": 0, "best_trade": 0,
             "avg_pnl": 0, "trading_days": 0,
             "capital_locked": 0, "capital_deployed": 0, "avg_trade_size": 0}
+
+
+# ── IBKR Pending Orders ───────────────────────────────────────────────────────
+
+def get_pending_orders() -> dict:
+    """Fetch all pending orders from IBKR with full details."""
+    try:
+        from .db import ib
+
+        if not ib.isConnected():
+            return {
+                "ok": True,
+                "orders": [],
+                "status": "IBKR not connected",
+                "total": 0,
+            }
+
+        # Fetch all open trades (orders)
+        open_orders = []
+        for trade in ib.openTrades():
+            try:
+                order = trade.order
+                order_status = trade.orderStatus
+
+                # Basic order details
+                contract = order.contract
+                symbol = contract.symbol
+
+                qty = float(order.totalQuantity)
+                filled = float(order.filledQuantity)
+                remaining = qty - filled
+
+                # Price info
+                limit_price = float(order.lmtPrice) if order.lmtPrice else None
+                aux_price = float(order.auxPrice) if order.auxPrice else None
+
+                # Status
+                status = order_status.status
+                avg_fill_price = float(order_status.avgFillPrice) if order_status.avgFillPrice else None
+
+                open_orders.append({
+                    "order_id": order.orderId,
+                    "symbol": symbol,
+                    "side": order.action,  # BUY or SELL
+                    "quantity": int(qty),
+                    "filled": int(filled),
+                    "remaining": int(remaining),
+                    "limit_price": round(limit_price, 2) if limit_price else None,
+                    "aux_price": round(aux_price, 2) if aux_price else None,
+                    "avg_fill_price": round(avg_fill_price, 2) if avg_fill_price else None,
+                    "status": status,
+                    "order_type": order.orderType,
+                    "time_in_force": order.tif,
+                    "created_time": order.createdTime if hasattr(order, 'createdTime') else None,
+                    "percent_filled": round(filled / qty * 100, 1) if qty > 0 else 0,
+                })
+            except Exception as e:
+                print(f"Error processing order {trade.order.orderId}: {e}")
+                continue
+
+        # Sort by symbol
+        open_orders.sort(key=lambda x: x["symbol"])
+
+        return {
+            "ok": True,
+            "orders": open_orders,
+            "total": len(open_orders),
+            "status": "connected",
+        }
+
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": str(e),
+            "orders": [],
+            "total": 0,
+        }

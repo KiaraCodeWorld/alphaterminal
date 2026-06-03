@@ -132,6 +132,12 @@ table.trade-tbl tr:hover td { background: #13181f; }
     </div>
   </div>
 
+  <!-- IBKR Pending Orders -->
+  <div style="margin-bottom: 28px;">
+    <div class="sec-title">IBKR Pending Orders (Live)</div>
+    <div id="pendingOrdersContainer" style="background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 16px;"><div class="loading">Loading orders…</div></div>
+  </div>
+
   <!-- Daily summary table -->
   <div class="sec-title">Daily Breakdown — click a row to expand trades</div>
   <div id="summaryContainer"><div class="loading">Loading…</div></div>
@@ -171,6 +177,13 @@ async function loadSummary() {
   }
   renderStats(data.totals);
   renderDays(data.days);
+  loadPendingOrders();
+}
+
+async function loadPendingOrders() {
+  const res = await fetch(`/api/algobot/orders/pending`);
+  const data = await res.json();
+  renderPendingOrders(data);
 }
 
 function renderStats(t) {
@@ -418,6 +431,67 @@ function renderDetailTrades(trades) {
     </table>`;
 }
 
+function renderPendingOrders(data) {
+  const container = document.getElementById("pendingOrdersContainer");
+
+  if (!data.ok) {
+    container.innerHTML = `<div style="color:#f04040;padding:12px;">${esc(data.error || "Failed to load orders")}</div>`;
+    return;
+  }
+
+  if (data.total === 0) {
+    container.innerHTML = `<div style="color:#4a5568;padding:12px;text-align:center;">No pending orders</div>`;
+    return;
+  }
+
+  const rows = data.orders.map(o => {
+    const sideColor = o.side === "BUY" ? "#00d68f" : "#f04040";
+    const statusColor = o.status === "Submitted" ? "#f59e0b" : o.status === "PreSubmitted" ? "#60a5fa" : "#7a8499";
+    const priceDisplay = o.limit_price ? `$${o.limit_price.toFixed(2)}` : (o.order_type === "MKT" ? "Market" : "—");
+
+    return `<tr>
+      <td style="font-weight:700;color:#00d68f;">${esc(o.symbol)}</td>
+      <td style="color:${sideColor};font-weight:700;">${o.side}</td>
+      <td style="text-align:right;">${o.quantity}</td>
+      <td style="text-align:right;color:#94a3b8;">${o.filled}/${o.quantity}</td>
+      <td style="text-align:right;">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">
+          <span style="width:40px;height:4px;background:#1e2536;border-radius:2px;display:inline-block;overflow:hidden;">
+            <span style="height:100%;background:#7c6af7;display:inline-block;width:${o.percent_filled}%;"></span>
+          </span>
+          <span style="font-size:0.75rem;color:#4a5568;min-width:30px;">${o.percent_filled}%</span>
+        </div>
+      </td>
+      <td style="text-align:right;font-weight:600;">${priceDisplay}</td>
+      <td style="text-align:right;color:#94a3b8;">${o.avg_fill_price ? "$"+o.avg_fill_price.toFixed(2) : "—"}</td>
+      <td><span style="background:${statusColor}44;color:${statusColor};border:1px solid ${statusColor}44;border-radius:6px;padding:2px 8px;font-size:0.7rem;font-weight:700;">${o.status}</span></td>
+      <td style="color:#7a8499;font-size:0.75rem;">${o.order_type}</td>
+      <td style="color:#60a5fa;font-size:0.8rem;">ID: ${o.order_id}</td>
+    </tr>`;
+  }).join("");
+
+  container.innerHTML = `
+    <table class="day-tbl" style="width:100%;font-size:0.8rem;">
+      <thead><tr>
+        <th>SYMBOL</th>
+        <th>SIDE</th>
+        <th>QTY</th>
+        <th>FILLED</th>
+        <th>PROGRESS</th>
+        <th>LIMIT PRICE</th>
+        <th>AVG FILL</th>
+        <th>STATUS</th>
+        <th>TYPE</th>
+        <th>ORDER ID</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:10px;padding:10px 12px;background:#161b22;border-radius:6px;border:1px solid #21262d;font-size:0.75rem;color:#4a5568;">
+      Total: <b style="color:#e2e8f4;">${data.total}</b> pending order${data.total!==1?"s":""}
+      — IBKR Status: <span style="color:#7c6af7;">${data.status}</span>
+    </div>`;
+}
+
 function fmt(v, dec=2)  { return v!=null ? Number(v).toFixed(dec) : "—"; }
 function fmt$(v)        { if(v==null) return "—"; return (v>=0?"+$":"-$")+Math.abs(v).toFixed(2); }
 function fmtK(v)        {
@@ -429,6 +503,11 @@ function esc(s)         { return String(s||"").replace(/&/g,"&amp;").replace(/</
 
 // Init
 loadSummary();
+
+// Refresh pending orders every 5 seconds
+setInterval(() => {
+  if (!_openDate) loadPendingOrders();  // Only refresh if detail panel not open
+}, 5000);
 </script>
 </body>
 </html>
