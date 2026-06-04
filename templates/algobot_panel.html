@@ -87,6 +87,17 @@ table.trade-tbl tr:hover td { background: #13181f; }
 
 .empty { color: #374151; padding: 32px 0; text-align: center; }
 .loading { color: #4a5568; padding: 20px 0; text-align: center; font-size: 0.85rem; }
+
+/* Animations */
+@keyframes slideIn {
+  from { transform: translateX(400px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes highlight {
+  0% { background: #0d2b1a; border-color: #00d68f; }
+  100% { background: #0d1117; border-color: #21262d; }
+}
 </style>
 </head>
 <body>
@@ -156,6 +167,53 @@ table.trade-tbl tr:hover td { background: #13181f; }
 <script>
 let _currentBot  = "{{ bots.keys()|list|first }}";
 let _selectedRow = null;
+let _lastOrderCount = 0;
+let _lastOrderSymbols = new Set();
+
+// Create audio context for beep alert
+function playBeepAlert() {
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 800;  // Hz
+    oscillator.type = 'sine';
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+  } catch (e) {
+    console.log("Audio not available");
+  }
+}
+
+// Visual notification for new position
+function showNewPositionNotification(symbol) {
+  const notif = document.createElement("div");
+  notif.style.cssText = `
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: #0d2b1a;
+    border: 2px solid #00d68f;
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #00d68f;
+    font-weight: 700;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+  `;
+  notif.textContent = `🟢 NEW POSITION: ${symbol}`;
+  document.body.appendChild(notif);
+
+  setTimeout(() => notif.remove(), 4000);
+}
 
 function selectBot(key, btn) {
   _currentBot = key;
@@ -441,7 +499,30 @@ function renderPendingOrders(data) {
 
   if (data.total === 0) {
     container.innerHTML = `<div style="color:#4a5568;padding:12px;text-align:center;">No pending orders</div>`;
+    _lastOrderCount = 0;
+    _lastOrderSymbols.clear();
     return;
+  }
+
+  // Detect new orders
+  const currentSymbols = new Set(data.orders.map(o => o.symbol));
+  const newOrders = [];
+
+  if (_lastOrderCount > 0 && data.total > _lastOrderCount) {
+    // New order(s) added
+    for (const order of data.orders) {
+      if (!_lastOrderSymbols.has(order.symbol)) {
+        newOrders.push(order.symbol);
+      }
+    }
+
+    // Trigger alerts for each new order
+    if (newOrders.length > 0) {
+      playBeepAlert();
+      newOrders.forEach(symbol => {
+        showNewPositionNotification(symbol);
+      });
+    }
   }
 
   const rows = data.orders.map(o => {
@@ -449,7 +530,12 @@ function renderPendingOrders(data) {
     const statusColor = o.status === "Submitted" ? "#f59e0b" : o.status === "PreSubmitted" ? "#60a5fa" : "#7a8499";
     const priceDisplay = o.limit_price ? `$${o.limit_price.toFixed(2)}` : (o.order_type === "MKT" ? "Market" : "—");
 
-    return `<tr>
+    const isNew = newOrders.includes(o.symbol);
+    const rowStyle = isNew
+      ? `style="background: #0d2b1a !important; border-left: 3px solid #00d68f; animation: highlight 1s ease-out;"`
+      : '';
+
+    return `<tr ${rowStyle}>
       <td style="font-weight:700;color:#00d68f;">${esc(o.symbol)}</td>
       <td style="color:${sideColor};font-weight:700;">${o.side}</td>
       <td style="text-align:right;">${o.quantity}</td>
@@ -489,7 +575,12 @@ function renderPendingOrders(data) {
     <div style="margin-top:10px;padding:10px 12px;background:#161b22;border-radius:6px;border:1px solid #21262d;font-size:0.75rem;color:#4a5568;">
       Total: <b style="color:#e2e8f4;">${data.total}</b> pending order${data.total!==1?"s":""}
       — IBKR Status: <span style="color:#7c6af7;">${data.status}</span>
+      — Last refresh: <span style="color:#60a5fa;">just now</span>
     </div>`;
+
+  // Update tracking
+  _lastOrderCount = data.total;
+  _lastOrderSymbols = currentSymbols;
 }
 
 function fmt(v, dec=2)  { return v!=null ? Number(v).toFixed(dec) : "—"; }
@@ -504,10 +595,10 @@ function esc(s)         { return String(s||"").replace(/&/g,"&amp;").replace(/</
 // Init
 loadSummary();
 
-// Refresh pending orders every 5 seconds
+// Refresh pending orders every 5 minutes
 setInterval(() => {
   if (!_openDate) loadPendingOrders();  // Only refresh if detail panel not open
-}, 5000);
+}, 300000);  // 5 minutes = 300,000 ms
 </script>
 </body>
 </html>
